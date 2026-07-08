@@ -5,6 +5,7 @@
  * 1. Fetches config.json from the server root.
  * 2. Creates the Phaser.Game instance using config values.
  * 3. Registers scenes (Boot → Load → Game).
+ * 4. Prevents browser context menu / drag on the game canvas.
  *
  * Phaser Arcade Physics is used for all movement & collisions.
  * All magic numbers come from config.json – never from JS.
@@ -41,30 +42,53 @@
   const phaserConfig = {
     type: Phaser.AUTO,
     parent: 'game-container',
-    width: 800,   /* viewport width  – scaled to window later if desired */
-    height: 600,  /* viewport height */
+    width: 800,
+    height: 600,
     backgroundColor: Phaser.Display.Color.HexStringToColor(
       config.world.backgroundColor
     ).color,
-    pixelArt: true,  // keep pixel-art crisp
+    pixelArt: true,
     physics: {
       default: 'arcade',
       arcade: {
         gravity: { y: config.physics.gravity },
-        debug: false   // set to true for collision boxes during dev
+        debug: false
       }
     },
     scale: {
-      mode: Phaser.Scale.FIT,     // scale to fill window
+      mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH
     },
-    scene: [BootScene, LoadScene, GameScene]
+    scene: [BootScene, LoadScene, GameScene],
+    input: {
+      mouse: {
+        preventDefaultWheel: true
+      }
+    }
   };
 
   /* ─── Launch ─── */
   const game = new Phaser.Game(phaserConfig);
 
-  /* Expose game instance for debugging via browser console */
+  /* ─── Prevent context menu and drag on game canvas ─── */
+  game.canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    return false;
+  });
+  game.canvas.addEventListener('dragstart', (e) => {
+    e.preventDefault();
+    return false;
+  });
+  game.canvas.addEventListener('selectstart', (e) => {
+    e.preventDefault();
+    return false;
+  });
+  /* Phaser 3.55+ built-in context menu disable */
+  if (game.input && game.input.mouse) {
+    game.input.mouse.disableContextMenu();
+  }
+
+  /* Expose game instance for debugging */
   window.astropia = game;
 
   console.log(`[Astropia] ${config.game.name} v${config.game.version} initialized.`);

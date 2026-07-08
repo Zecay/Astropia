@@ -3,7 +3,8 @@
  * https://github.com/Zecay/Astropia
  *
  * Generates ALL placeholder textures programmatically.
- * Includes player animations, crack overlays, blocks, items, gems, fruits, seeds.
+ * Includes player animations (1-tile tall chibi style), crack overlays,
+ * blocks, items, gems, fruits, seeds.
  *
  * No external image assets required. Uses Phaser 3 Graphics API only.
  */
@@ -46,70 +47,49 @@ class LoadScene extends Phaser.Scene {
     const config = this.registry.get('config');
     const TS = config.world.tileSize;
 
-    /* Track progress manually since we aren't using real load calls */
-    this._genProgress = 0;
-
-    /* ─── Player spritesheets ─── */
-    this._generatePlayerIdle(config, TS, TS * 2);
-    this._genProgress += 0.2;
-    this._generatePlayerRun(config, TS, TS * 2);
-    this._genProgress += 0.2;
-    this._generatePlayerJump(config, TS, TS * 2);
-    this._genProgress += 0.1;
-    this._generatePlayerPunch(config, TS, TS * 2);
-    this._genProgress += 0.1;
+    /* ─── Player spritesheets (1 tile tall: 24x32) ─── */
+    const pw = Math.round(config.physics.playerWidthTiles * TS); // 24
+    const ph = Math.round(config.physics.playerHeightTiles * TS); // 32
+    this._generatePlayerIdle(config, pw, ph);
+    this._generatePlayerRun(config, pw, ph);
+    this._generatePlayerJump(config, pw, ph);
+    this._generatePlayerPunch(config, pw, ph);
 
     /* ─── Fist texture ─── */
-    this._generateFistTexture(16);
+    this._generateFistTexture(12);
 
     /* ─── Crack overlays (3 stages) ─── */
     this._generateCrackTextures(TS);
 
-    /* ─── Blocks ─── */
+    /* ─── Blocks (dirt has both plain and grass textures) ─── */
     this._generateBlockTextures(config, TS);
-    this._genProgress += 0.1;
 
     /* ─── Items ─── */
     this._generateItemTextures(config, 24);
-    this._genProgress += 0.1;
 
     /* ─── Gem ─── */
     this._generateGemTexture(20);
-    this._genProgress += 0.05;
 
     /* ─── Fruits ─── */
     this._generateFruitTextures(config, 20);
-    this._genProgress += 0.05;
 
     /* ─── Seeds ─── */
     this._generateSeedTextures(config, 20);
-    this._genProgress += 0.1;
 
     console.log('[Astropia] All placeholder textures generated.');
     this.scene.start('GameScene');
   }
 
   /* ═══════════════════════════════════════════════════════════════
-     SPRITESHEET GENERATION HELPERS
+     SPRITESHEET GENERATOR
      ═══════════════════════════════════════════════════════════════ */
 
-  /**
-   * Generate a multi-frame spritesheet texture from a drawing callback.
-   * @param {string} key  - Texture key to register
-   * @param {number} fw   - Frame width
-   * @param {number} fh   - Frame height
-   * @param {number} fc   - Number of frames
-   * @param {function} drawFn - (g, index, fw, fh) → draws one frame at (index*fw, 0)
-   */
   _generateSpritesheet(key, fw, fh, fc, drawFn) {
     const totalW = fw * fc;
     const g = this.make.graphics({ add: false });
-
     for (let i = 0; i < fc; i++) {
       drawFn(g, i, fw, fh);
     }
-
-    /* Generate as a single wide texture, then re-register as spritesheet */
     g.generateTexture(key + '_raw', totalW, fh);
     g.destroy();
 
@@ -119,39 +99,48 @@ class LoadScene extends Phaser.Scene {
   }
 
   /* ═══════════════════════════════════════════════════════════════
-     PLAYER IDLE (2 frames — subtle bob)
+     PLAYER IDLE (2 frames — 24x32, chibi style)
      ═══════════════════════════════════════════════════════════════ */
 
   _generatePlayerIdle(config, w, h) {
-    const animConfig = config.animation;
-    const fc = animConfig.idleFrameCount; // 2
+    const fc = config.animation.idleFrameCount;
+    const colors = {
+      skin: Phaser.Display.Color.HexStringToColor(config.player.skinColor).color,
+      body: Phaser.Display.Color.HexStringToColor(config.player.bodyColor).color,
+      pants: Phaser.Display.Color.HexStringToColor(config.player.pantsColor).color,
+      shoes: Phaser.Display.Color.HexStringToColor(config.player.shoeColor).color
+    };
 
     this._generateSpritesheet('player_idle', w, h, fc, (g, frame) => {
-      const offsetX = frame * w;
+      const ox = frame * w;
       const bobY = frame === 0 ? 0 : -1;
 
-      /* Body (blue shirt) */
-      g.fillStyle(0x3366cc, 1);
-      g.fillRect(offsetX + 4, 16 + bobY, w - 8, 24);
+      /* Legs (bottom 8px) */
+      g.fillStyle(colors.pants, 1);
+      g.fillRect(ox + 5, 21 + bobY, 5, 7);
+      g.fillRect(ox + 14, 21 + bobY, 5, 7);
+      /* Shoes */
+      g.fillStyle(colors.shoes, 1);
+      g.fillRect(ox + 4, 26 + bobY, 7, 6);
+      g.fillRect(ox + 13, 26 + bobY, 7, 6);
 
-      /* Head */
-      g.fillStyle(0xffd5a0, 1);
-      g.fillRect(offsetX + 6, 2 + bobY, w - 12, 16);
+      /* Body / shirt (middle 12px) */
+      g.fillStyle(colors.body, 1);
+      g.fillRect(ox + 3, 10 + bobY, w - 6, 12);
+
+      /* Head (top 10px) - big chibi head */
+      g.fillStyle(colors.skin, 1);
+      g.fillRect(ox + 4, 1 + bobY, w - 8, 10);
 
       /* Eyes */
       g.fillStyle(0x000000, 1);
-      g.fillRect(offsetX + 10, 8 + bobY, 4, 4);
-      g.fillRect(offsetX + 18, 8 + bobY, 4, 4);
+      g.fillRect(ox + 7, 4 + bobY, 3, 3);
+      g.fillRect(ox + 14, 4 + bobY, 3, 3);
 
-      /* Legs */
-      g.fillStyle(0x333366, 1);
-      g.fillRect(offsetX + 6, 40 + bobY, 9, 20);
-      g.fillRect(offsetX + 17, 40 + bobY, 9, 20);
-
-      /* Shoes */
-      g.fillStyle(0x4a2800, 1);
-      g.fillRect(offsetX + 5, 56 + bobY, 11, 8);
-      g.fillRect(offsetX + 16, 56 + bobY, 11, 8);
+      /* Arms at sides */
+      g.fillStyle(colors.skin, 1);
+      g.fillRect(ox + 0, 12 + bobY, 4, 5);
+      g.fillRect(ox + w - 4, 12 + bobY, 4, 5);
     });
   }
 
@@ -160,134 +149,144 @@ class LoadScene extends Phaser.Scene {
      ═══════════════════════════════════════════════════════════════ */
 
   _generatePlayerRun(config, w, h) {
-    const fc = config.animation.runFrameCount; // 4
-    const legColors = [0x333366, 0x333366, 0x333366, 0x333366];
+    const fc = config.animation.runFrameCount;
+    const colors = {
+      skin: Phaser.Display.Color.HexStringToColor(config.player.skinColor).color,
+      body: Phaser.Display.Color.HexStringToColor(config.player.bodyColor).color,
+      pants: Phaser.Display.Color.HexStringToColor(config.player.pantsColor).color,
+      shoes: Phaser.Display.Color.HexStringToColor(config.player.shoeColor).color
+    };
 
     this._generateSpritesheet('player_run', w, h, fc, (g, frame) => {
       const ox = frame * w;
 
-      /* Body (blue shirt) */
-      g.fillStyle(0x3366cc, 1);
-      g.fillRect(ox + 4, 16, w - 8, 24);
+      /* Shirt */
+      g.fillStyle(colors.body, 1);
+      g.fillRect(ox + 3, 10, w - 6, 12);
 
       /* Head */
-      g.fillStyle(0xffd5a0, 1);
-      g.fillRect(ox + 6, 2, w - 12, 16);
-
-      /* Eyes */
+      g.fillStyle(colors.skin, 1);
+      g.fillRect(ox + 4, 1, w - 8, 10);
       g.fillStyle(0x000000, 1);
-      g.fillRect(ox + 10, 8, 4, 4);
-      g.fillRect(ox + 18, 8, 4, 4);
+      g.fillRect(ox + 7, 4, 3, 3);
+      g.fillRect(ox + 14, 4, 3, 3);
 
-      /* Legs — swing based on frame */
-      g.fillStyle(0x333366, 1);
+      /* Legs based on frame */
+      g.fillStyle(colors.pants, 1);
       switch (frame) {
-        case 0: // left forward
-          g.fillRect(ox + 4, 40, 10, 20);
-          g.fillRect(ox + 18, 40, 10, 18);
+        case 0:
+          g.fillRect(ox + 4, 21, 6, 7);
+          g.fillRect(ox + 15, 21, 5, 5);
           break;
-        case 1: // together
-          g.fillRect(ox + 6, 40, 9, 20);
-          g.fillRect(ox + 17, 40, 9, 20);
+        case 1:
+          g.fillRect(ox + 5, 21, 5, 7);
+          g.fillRect(ox + 14, 21, 5, 7);
           break;
-        case 2: // right forward
-          g.fillRect(ox + 4, 40, 10, 18);
-          g.fillRect(ox + 18, 40, 10, 20);
+        case 2:
+          g.fillRect(ox + 4, 21, 5, 5);
+          g.fillRect(ox + 15, 21, 6, 7);
           break;
-        case 3: // together (slight offset)
-          g.fillRect(ox + 6, 40, 9, 20);
-          g.fillRect(ox + 17, 40, 9, 20);
+        case 3:
+          g.fillRect(ox + 5, 21, 5, 7);
+          g.fillRect(ox + 14, 21, 5, 7);
           break;
       }
+      g.fillStyle(colors.shoes, 1);
+      g.fillRect(ox + 4, 26, 7, 6);
+      g.fillRect(ox + 13, 26, 7, 6);
 
-      /* Shoes */
-      g.fillStyle(0x4a2800, 1);
-      g.fillRect(ox + 5, 56, 11, 8);
-      g.fillRect(ox + 16, 56, 11, 8);
+      /* Arms swinging */
+      g.fillStyle(colors.skin, 1);
+      g.fillRect(ox + 0, 12, 4, 5);
+      g.fillRect(ox + w - 4, 12, 4, 5);
     });
   }
 
   /* ═══════════════════════════════════════════════════════════════
-     PLAYER JUMP (1 frame — legs tucked)
+     PLAYER JUMP (1 frame — arms up)
      ═══════════════════════════════════════════════════════════════ */
 
   _generatePlayerJump(config, w, h) {
+    const colors = {
+      skin: Phaser.Display.Color.HexStringToColor(config.player.skinColor).color,
+      body: Phaser.Display.Color.HexStringToColor(config.player.bodyColor).color,
+      pants: Phaser.Display.Color.HexStringToColor(config.player.pantsColor).color,
+      shoes: Phaser.Display.Color.HexStringToColor(config.player.shoeColor).color
+    };
+
     this._generateSpritesheet('player_jump', w, h, 1, (g, frame) => {
       const ox = frame * w;
 
-      /* Body (blue shirt) */
-      g.fillStyle(0x3366cc, 1);
-      g.fillRect(ox + 4, 14, w - 8, 22);
+      /* Shirt */
+      g.fillStyle(colors.body, 1);
+      g.fillRect(ox + 3, 8, w - 6, 11);
 
       /* Head */
-      g.fillStyle(0xffd5a0, 1);
-      g.fillRect(ox + 6, 0, w - 12, 16);
-
-      /* Eyes */
+      g.fillStyle(colors.skin, 1);
+      g.fillRect(ox + 4, 0, w - 8, 9);
       g.fillStyle(0x000000, 1);
-      g.fillRect(ox + 10, 6, 4, 4);
-      g.fillRect(ox + 18, 6, 4, 4);
+      g.fillRect(ox + 7, 3, 3, 3);
+      g.fillRect(ox + 14, 3, 3, 3);
 
       /* Arms up */
-      g.fillStyle(0xffd5a0, 1);
-      g.fillRect(ox + 0, 18, 5, 8);
-      g.fillRect(ox + 27, 18, 5, 8);
+      g.fillStyle(colors.skin, 1);
+      g.fillRect(ox + 0, 4, 4, 6);
+      g.fillRect(ox + w - 4, 4, 4, 6);
 
       /* Legs tucked */
-      g.fillStyle(0x333366, 1);
-      g.fillRect(ox + 5, 42, 10, 14);
-      g.fillRect(ox + 17, 42, 10, 14);
-
-      /* Shoes */
-      g.fillStyle(0x4a2800, 1);
-      g.fillRect(ox + 4, 52, 12, 8);
-      g.fillRect(ox + 16, 52, 12, 8);
+      g.fillStyle(colors.pants, 1);
+      g.fillRect(ox + 4, 20, 7, 6);
+      g.fillRect(ox + 13, 20, 7, 6);
+      g.fillStyle(colors.shoes, 1);
+      g.fillRect(ox + 3, 24, 8, 6);
+      g.fillRect(ox + 13, 24, 8, 6);
     });
   }
 
   /* ═══════════════════════════════════════════════════════════════
-     PLAYER PUNCH (2 frames — windup + extended)
+     PLAYER PUNCH (2 frames)
      ═══════════════════════════════════════════════════════════════ */
 
   _generatePlayerPunch(config, w, h) {
-    const fc = config.animation.punchFrameCount; // 2
+    const fc = config.animation.punchFrameCount;
+    const colors = {
+      skin: Phaser.Display.Color.HexStringToColor(config.player.skinColor).color,
+      body: Phaser.Display.Color.HexStringToColor(config.player.bodyColor).color,
+      pants: Phaser.Display.Color.HexStringToColor(config.player.pantsColor).color,
+      shoes: Phaser.Display.Color.HexStringToColor(config.player.shoeColor).color
+    };
 
     this._generateSpritesheet('player_punch', w, h, fc, (g, frame) => {
       const ox = frame * w;
 
-      /* Body */
-      g.fillStyle(0x3366cc, 1);
-      g.fillRect(ox + 4, 16, w - 8, 24);
+      /* Shirt */
+      g.fillStyle(colors.body, 1);
+      g.fillRect(ox + 3, 10, w - 6, 12);
 
       /* Head */
-      g.fillStyle(0xffd5a0, 1);
-      g.fillRect(ox + 6, 2, w - 12, 16);
-
-      /* Eyes */
+      g.fillStyle(colors.skin, 1);
+      g.fillRect(ox + 4, 1, w - 8, 10);
       g.fillStyle(0x000000, 1);
-      g.fillRect(ox + 10, 8, 4, 4);
-      g.fillRect(ox + 18, 8, 4, 4);
+      g.fillRect(ox + 7, 4, 3, 3);
+      g.fillRect(ox + 14, 4, 3, 3);
 
       if (frame === 0) {
-        /* Windup: arm pulled back */
-        g.fillStyle(0xffd5a0, 1);
-        g.fillRect(ox + 21, 18, 8, 6); // arm
-        g.fillRect(ox + 26, 14, 6, 6); // fist behind
+        /* Windup: fist back */
+        g.fillStyle(colors.skin, 1);
+        g.fillRect(ox + 18, 12, 5, 5);
       } else {
         /* Extended: arm forward */
-        g.fillStyle(0xffd5a0, 1);
-        g.fillRect(ox + 24, 20, 8, 5); // arm forward
+        g.fillStyle(colors.skin, 1);
+        g.fillRect(ox + 20, 13, 5, 4);
       }
 
       /* Legs */
-      g.fillStyle(0x333366, 1);
-      g.fillRect(ox + 6, 40, 9, 20);
-      g.fillRect(ox + 17, 40, 9, 20);
-
-      /* Shoes */
-      g.fillStyle(0x4a2800, 1);
-      g.fillRect(ox + 5, 56, 11, 8);
-      g.fillRect(ox + 16, 56, 11, 8);
+      g.fillStyle(colors.pants, 1);
+      g.fillRect(ox + 5, 21, 5, 7);
+      g.fillRect(ox + 14, 21, 5, 7);
+      g.fillStyle(colors.shoes, 1);
+      g.fillRect(ox + 4, 26, 7, 6);
+      g.fillRect(ox + 13, 26, 7, 6);
     });
   }
 
@@ -296,11 +295,13 @@ class LoadScene extends Phaser.Scene {
      ═══════════════════════════════════════════════════════════════ */
 
   _generateFistTexture(size) {
+    const config = this.registry.get('config');
+    const skinColor = Phaser.Display.Color.HexStringToColor(config.player.skinColor).color;
     const g = this.make.graphics({ add: false });
-    g.fillStyle(0xffd5a0, 1);
-    g.fillRoundedRect(0, 0, size, size, 4);
-    g.lineStyle(1, 0xccaa80, 0.5);
-    g.strokeRoundedRect(0, 0, size, size, 4);
+    g.fillStyle(skinColor, 1);
+    g.fillRoundedRect(0, 0, size, size, 3);
+    g.lineStyle(1, 0x000000, 0.2);
+    g.strokeRoundedRect(0, 0, size, size, 3);
     g.generateTexture('fist', size, size);
     g.destroy();
   }
@@ -329,7 +330,7 @@ class LoadScene extends Phaser.Scene {
     g.generateTexture('crack_2', TS, TS);
     g.destroy();
 
-    /* Stage 3: large cracks (bolder) */
+    /* Stage 3: large cracks */
     g = this.make.graphics({ add: false });
     g.lineStyle(2, 0x000000, 0.8);
     g.lineBetween(2, 4, TS * 0.4, TS * 0.3);
@@ -366,27 +367,59 @@ class LoadScene extends Phaser.Scene {
         g.lineStyle(1, 0x000000, 0.15);
         g.lineBetween(0, 2, TS, 2);
         g.lineBetween(0, 4, TS, 4);
-      } else {
+      } else if (Number(id) === 1) {
+        /* Dirt: generate TWO textures (plain dirt + grass-topped) */
+        /* Plain dirt */
         g.fillStyle(color, 1);
         g.fillRect(1, 1, TS - 2, TS - 2);
-
         g.lineStyle(1, 0x000000, 0.3);
         g.strokeRect(1, 1, TS - 2, TS - 2);
-
         const lighter = Phaser.Display.Color.IntegerToColor(color);
         lighter.lighten(20);
         g.lineStyle(1, lighter.color, 0.3);
         g.lineBetween(1, 1, TS - 2, 1);
         g.lineBetween(1, 1, 1, TS - 2);
-
         const darker = Phaser.Display.Color.IntegerToColor(color);
         darker.darken(20);
         g.lineStyle(1, darker.color, 0.3);
         g.lineBetween(TS - 2, 1, TS - 2, TS - 2);
         g.lineBetween(1, TS - 2, TS - 2, TS - 2);
+        g.generateTexture('block_dirt', TS, TS);
+        g.clear();
+
+        /* Grass-topped dirt: same as dirt but with green strip on top */
+        const grassColor = Phaser.Display.Color.HexStringToColor(block.grassColor || '#5B8C2A').color;
+        g.fillStyle(color, 1);
+        g.fillRect(1, 1, TS - 2, TS - 2);
+        g.fillStyle(grassColor, 1);
+        g.fillRect(1, 1, TS - 2, 6);
+        g.lineStyle(1, 0x000000, 0.3);
+        g.strokeRect(1, 1, TS - 2, TS - 2);
+        g.lineStyle(1, lighter.color, 0.3);
+        g.lineBetween(1, 1, TS - 2, 1);
+        g.lineBetween(1, 1, 1, TS - 2);
+        g.lineStyle(1, darker.color, 0.3);
+        g.lineBetween(TS - 2, 1, TS - 2, TS - 2);
+        g.lineBetween(1, TS - 2, TS - 2, TS - 2);
+        g.generateTexture('block_grass', TS, TS);
+      } else {
+        g.fillStyle(color, 1);
+        g.fillRect(1, 1, TS - 2, TS - 2);
+        g.lineStyle(1, 0x000000, 0.3);
+        g.strokeRect(1, 1, TS - 2, TS - 2);
+        const lighter = Phaser.Display.Color.IntegerToColor(color);
+        lighter.lighten(20);
+        g.lineStyle(1, lighter.color, 0.3);
+        g.lineBetween(1, 1, TS - 2, 1);
+        g.lineBetween(1, 1, 1, TS - 2);
+        const darker = Phaser.Display.Color.IntegerToColor(color);
+        darker.darken(20);
+        g.lineStyle(1, darker.color, 0.3);
+        g.lineBetween(TS - 2, 1, TS - 2, TS - 2);
+        g.lineBetween(1, TS - 2, TS - 2, TS - 2);
+        g.generateTexture(block.texture, TS, TS);
       }
 
-      g.generateTexture(block.texture, TS, TS);
       g.destroy();
     }
   }
@@ -397,7 +430,6 @@ class LoadScene extends Phaser.Scene {
 
   _generateItemTextures(config, size) {
     const items = config.items;
-
     for (const [id, item] of Object.entries(items)) {
       if (!item.texture || item.texture === '') continue;
       if (item.texture.startsWith('block_')) continue;
@@ -407,14 +439,11 @@ class LoadScene extends Phaser.Scene {
 
       const g = this.make.graphics({ add: false });
       const color = Phaser.Display.Color.HexStringToColor(item.color || '#888888').color;
-
       g.fillStyle(0x333355, 1);
       g.fillRoundedRect(0, 0, size, size, 3);
-
       const inset = 3;
       g.fillStyle(color, 1);
       g.fillRect(inset, inset, size - inset * 2, size - inset * 2);
-
       g.generateTexture(item.texture, size, size);
       g.destroy();
     }
@@ -427,7 +456,6 @@ class LoadScene extends Phaser.Scene {
   _generateGemTexture(size) {
     const g = this.make.graphics({ add: false });
     const cx = size / 2, cy = size / 2, half = size / 2 - 1;
-
     g.fillStyle(0x00ffcc, 1);
     g.beginPath();
     g.moveTo(cx, cy - half);
@@ -436,11 +464,9 @@ class LoadScene extends Phaser.Scene {
     g.lineTo(cx - half, cy);
     g.closePath();
     g.fillPath();
-
     g.lineStyle(1, 0xffffff, 0.6);
     g.lineBetween(cx, cy - half + 2, cx + half - 2, cy);
     g.lineBetween(cx, cy - half + 2, cx - half + 2, cy);
-
     g.generateTexture('item_gem', size, size);
     g.destroy();
   }
@@ -450,7 +476,6 @@ class LoadScene extends Phaser.Scene {
      ═══════════════════════════════════════════════════════════════ */
 
   _generateFruitTextures(config, size) {
-    /* Apple */
     let g = this.make.graphics({ add: false });
     g.fillStyle(0xff3333, 1);
     g.fillCircle(size / 2, size / 2 + 1, size / 2 - 2);
@@ -461,7 +486,6 @@ class LoadScene extends Phaser.Scene {
     g.generateTexture('item_apple', size, size);
     g.destroy();
 
-    /* Pinecone */
     g = this.make.graphics({ add: false });
     g.fillStyle(0x8B6F47, 1);
     g.beginPath();
@@ -486,7 +510,6 @@ class LoadScene extends Phaser.Scene {
   _generateSeedTextures(config, size) {
     const cx = size / 2, cy = size / 2;
 
-    /* Apple Seed */
     let g = this.make.graphics({ add: false });
     g.fillStyle(0x6B4226, 1);
     this._drawEllipse(g, cx, cy, size - 4, size - 6);
@@ -497,7 +520,6 @@ class LoadScene extends Phaser.Scene {
     g.generateTexture('item_seed_apple', size, size);
     g.destroy();
 
-    /* Pinecone Seed */
     g = this.make.graphics({ add: false });
     g.fillStyle(0x4A3520, 1);
     g.fillTriangle(size / 2, 2, 2, size - 2, size - 2, size - 2);

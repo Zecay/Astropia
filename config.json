@@ -15,14 +15,15 @@
     "playerDragX": 4000,
     "playerMaxSpeedY": 1000,
     "jumpVelocity": -700,
-    "playerWidth": 28,
-    "playerHeight": 60,
+    "playerWidthTiles": 0.75,
+    "playerHeightTiles": 1.0,
     "playerReachTiles": 4,
     "airControl": 1.0,
     "coyoteTimeMs": 80,
     "jumpBufferMs": 100,
     "punchCooldownMs": 350,
-    "punchReachTiles": 4
+    "punchReachTiles": 4,
+    "blockRegenMs": 5000
   },
 
   "world": {
@@ -33,7 +34,9 @@
     "skyColor": "#87CEEB",
     "spawnTileX": 50,
     "spawnTileY": 20,
-    "groundLevel": 40
+    "groundLevel": 40,
+    "cameraDeadzoneWidth": 160,
+    "cameraDeadzoneHeight": 60
   },
 
   "player": {
@@ -53,6 +56,7 @@
       "background": false,
       "health": 0,
       "unbreakable": false,
+      "blocksGrassGrowth": false,
       "texture": "",
       "drop": null
     },
@@ -64,23 +68,12 @@
       "background": false,
       "health": 6,
       "unbreakable": false,
+      "blocksGrassGrowth": true,
       "texture": "block_dirt",
       "color": "#8B5E3C",
+      "grassColor": "#5B8C2A",
       "bgColor": "#5A3C26",
       "drop": { "itemId": 1, "minCount": 1, "maxCount": 1, "chance": 1.0 }
-    },
-    "2": {
-      "name": "dirt_with_grass",
-      "solid": true,
-      "foreground": true,
-      "platform": false,
-      "background": false,
-      "health": 6,
-      "unbreakable": false,
-      "texture": "block_grass",
-      "color": "#5B8C2A",
-      "bgColor": "#3A6B1A",
-      "drop": { "itemId": 2, "minCount": 1, "maxCount": 1, "chance": 1.0 }
     },
     "3": {
       "name": "rock",
@@ -90,8 +83,10 @@
       "background": false,
       "health": 12,
       "unbreakable": false,
+      "blocksGrassGrowth": true,
       "texture": "block_rock",
       "color": "#7A7A7A",
+      "grassColor": "#7A7A7A",
       "bgColor": "#555555",
       "drop": { "itemId": 3, "minCount": 1, "maxCount": 1, "chance": 1.0 }
     },
@@ -103,8 +98,10 @@
       "background": false,
       "health": 8,
       "unbreakable": false,
+      "blocksGrassGrowth": false,
       "texture": "block_platform",
       "color": "#A07040",
+      "grassColor": "#A07040",
       "bgColor": "#70502A",
       "drop": { "itemId": 4, "minCount": 1, "maxCount": 1, "chance": 1.0 }
     },
@@ -116,8 +113,10 @@
       "background": false,
       "health": 1,
       "unbreakable": false,
+      "blocksGrassGrowth": false,
       "texture": "block_cloud",
       "color": "#FFFFFF",
+      "grassColor": "#FFFFFF",
       "bgColor": "#DDDDDD",
       "drop": null
     },
@@ -129,8 +128,10 @@
       "background": false,
       "health": 999999,
       "unbreakable": true,
+      "blocksGrassGrowth": false,
       "texture": "block_bedrock",
       "color": "#2A2A2A",
+      "grassColor": "#2A2A2A",
       "bgColor": "#1A1A1A",
       "drop": null
     },
@@ -142,36 +143,12 @@
       "background": false,
       "health": 20,
       "unbreakable": false,
+      "blocksGrassGrowth": false,
       "texture": "block_door",
       "color": "#8B6914",
+      "grassColor": "#8B6914",
       "bgColor": "#6B4914",
       "drop": { "itemId": 7, "minCount": 1, "maxCount": 1, "chance": 1.0 }
-    },
-    "20": {
-      "name": "apple_tree",
-      "solid": true,
-      "foreground": true,
-      "platform": false,
-      "background": false,
-      "health": 10,
-      "unbreakable": false,
-      "texture": "block_tree_apple",
-      "color": "#2D6B1E",
-      "bgColor": "#1B4D0E",
-      "drop": { "itemId": 20, "minCount": 1, "maxCount": 2, "chance": 1.0 }
-    },
-    "21": {
-      "name": "pine_tree",
-      "solid": true,
-      "foreground": true,
-      "platform": false,
-      "background": false,
-      "health": 10,
-      "unbreakable": false,
-      "texture": "block_tree_pine",
-      "color": "#1B4D0E",
-      "bgColor": "#0A2D04",
-      "drop": { "itemId": 21, "minCount": 1, "maxCount": 2, "chance": 1.0 }
     }
   },
 
@@ -183,14 +160,6 @@
       "maxStack": 200,
       "texture": "item_dirt",
       "color": "#8B5E3C"
-    },
-    "2": {
-      "name": "Dirt with Grass",
-      "itemType": "block",
-      "blockId": 2,
-      "maxStack": 200,
-      "texture": "item_grass",
-      "color": "#5B8C2A"
     },
     "3": {
       "name": "Rock",
@@ -237,22 +206,6 @@
       "growsIntoTreeBlockId": 21,
       "growthTimeMs": 90000,
       "fruitItemId": 31
-    },
-    "20": {
-      "name": "Apple Tree",
-      "itemType": "block",
-      "blockId": 20,
-      "maxStack": 200,
-      "texture": "block_tree_apple",
-      "color": "#2D6B1E"
-    },
-    "21": {
-      "name": "Pine Tree",
-      "itemType": "block",
-      "blockId": 21,
-      "maxStack": 200,
-      "texture": "block_tree_pine",
-      "color": "#1B4D0E"
     },
     "30": {
       "name": "Apple",
@@ -308,36 +261,8 @@
         "name": "Dirt with Grass",
         "seedA": 10,
         "seedB": 11,
-        "resultItemId": 2,
-        "description": "Apple Seed + Pinecone = Dirt with Grass"
-      },
-      {
-        "name": "Cave Rock",
-        "seedA": 10,
-        "seedB": 10,
-        "resultItemId": 3,
-        "description": "Apple Seed + Apple Seed = Rock"
-      },
-      {
-        "name": "Wood Platform",
-        "seedA": 11,
-        "seedB": 11,
-        "resultItemId": 4,
-        "description": "Pinecone + Pinecone = Wood Platform"
-      },
-      {
-        "name": "Door",
-        "seedA": 10,
-        "seedB": 3,
-        "resultItemId": 7,
-        "description": "Apple Seed + Rock (item) = Door"
-      },
-      {
-        "name": "Dirt",
-        "seedA": 11,
-        "seedB": 2,
         "resultItemId": 1,
-        "description": "Pinecone + Dirt with Grass = Dirt"
+        "description": "Apple Seed + Pinecone = Dirt"
       }
     ]
   },
@@ -368,7 +293,8 @@
     "hotbarSelectedColor": "#ffd700",
     "tooltipBgColor": "#000000cc",
     "tooltipTextColor": "#ffffff",
-    "debugTextEnabled": true
+    "debugTextEnabled": true,
+    "placeGhostAlpha": 0.4
   },
 
   "sfx": {

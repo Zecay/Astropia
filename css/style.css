@@ -15,6 +15,8 @@ html, body {
   justify-content: center;
   align-items: center;
   font-family: 'Segoe UI', Tahoma, sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 #game-container {
@@ -27,6 +29,13 @@ html, body {
   image-rendering: pixelated;       /* crisp pixel look */
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
+  /* Prevent drag / selection on canvas */
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  outline: none;
 }
 
 /* ─── Loading Overlay (fallback) ─────────── */
