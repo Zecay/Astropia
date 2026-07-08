@@ -14,11 +14,12 @@
 
   <!--
     ─── BOOT ORDER ───────────────────────────
-    1. PacketTypes – shared constants
-    2. main.js – fetches config.json, creates Phaser.Game
-    3. Scenes are registered inside main.js dynamically
+    1. Shared constants
+    2. Client modules (SoundManager, then scenes)
+    3. main.js – fetches config.json, creates Phaser.Game
   -->
   <script src="js/shared/PacketTypes.js"></script>
+  <script src="js/client/SoundManager.js"></script>
   <script src="js/client/scenes/BootScene.js"></script>
   <script src="js/client/scenes/LoadScene.js"></script>
   <script src="js/client/scenes/GameScene.js"></script>

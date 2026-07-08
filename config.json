@@ -9,13 +9,20 @@
   },
 
   "physics": {
-    "gravity": 1800,
-    "playerMaxSpeedX": 260,
-    "playerAccelerationX": 2800,
-    "playerDragX": 2600,
-    "playerMaxSpeedY": 800,
-    "jumpVelocity": -550,
-    "playerReachTiles": 4
+    "gravity": 2000,
+    "playerMaxSpeedX": 220,
+    "playerAccelerationX": 3000,
+    "playerDragX": 4000,
+    "playerMaxSpeedY": 1000,
+    "jumpVelocity": -700,
+    "playerWidth": 28,
+    "playerHeight": 60,
+    "playerReachTiles": 4,
+    "airControl": 1.0,
+    "coyoteTimeMs": 80,
+    "jumpBufferMs": 100,
+    "punchCooldownMs": 350,
+    "punchReachTiles": 4
   },
 
   "world": {
@@ -29,13 +36,23 @@
     "groundLevel": 40
   },
 
+  "player": {
+    "name": "Player",
+    "bodyColor": "#3366cc",
+    "skinColor": "#ffd5a0",
+    "pantsColor": "#333366",
+    "shoeColor": "#4a2800"
+  },
+
   "blocks": {
     "0": {
       "name": "air",
       "solid": false,
       "foreground": false,
       "platform": false,
+      "background": false,
       "health": 0,
+      "unbreakable": false,
       "texture": "",
       "drop": null
     },
@@ -44,9 +61,12 @@
       "solid": true,
       "foreground": true,
       "platform": false,
+      "background": false,
       "health": 6,
+      "unbreakable": false,
       "texture": "block_dirt",
       "color": "#8B5E3C",
+      "bgColor": "#5A3C26",
       "drop": { "itemId": 1, "minCount": 1, "maxCount": 1, "chance": 1.0 }
     },
     "2": {
@@ -54,9 +74,12 @@
       "solid": true,
       "foreground": true,
       "platform": false,
+      "background": false,
       "health": 6,
+      "unbreakable": false,
       "texture": "block_grass",
       "color": "#5B8C2A",
+      "bgColor": "#3A6B1A",
       "drop": { "itemId": 2, "minCount": 1, "maxCount": 1, "chance": 1.0 }
     },
     "3": {
@@ -64,9 +87,12 @@
       "solid": true,
       "foreground": true,
       "platform": false,
+      "background": false,
       "health": 12,
+      "unbreakable": false,
       "texture": "block_rock",
       "color": "#7A7A7A",
+      "bgColor": "#555555",
       "drop": { "itemId": 3, "minCount": 1, "maxCount": 1, "chance": 1.0 }
     },
     "4": {
@@ -74,10 +100,78 @@
       "solid": false,
       "foreground": false,
       "platform": true,
+      "background": false,
       "health": 8,
+      "unbreakable": false,
       "texture": "block_platform",
       "color": "#A07040",
+      "bgColor": "#70502A",
       "drop": { "itemId": 4, "minCount": 1, "maxCount": 1, "chance": 1.0 }
+    },
+    "5": {
+      "name": "cloud",
+      "solid": false,
+      "foreground": false,
+      "platform": false,
+      "background": false,
+      "health": 1,
+      "unbreakable": false,
+      "texture": "block_cloud",
+      "color": "#FFFFFF",
+      "bgColor": "#DDDDDD",
+      "drop": null
+    },
+    "6": {
+      "name": "bedrock",
+      "solid": true,
+      "foreground": true,
+      "platform": false,
+      "background": false,
+      "health": 999999,
+      "unbreakable": true,
+      "texture": "block_bedrock",
+      "color": "#2A2A2A",
+      "bgColor": "#1A1A1A",
+      "drop": null
+    },
+    "7": {
+      "name": "door",
+      "solid": false,
+      "foreground": true,
+      "platform": false,
+      "background": false,
+      "health": 20,
+      "unbreakable": false,
+      "texture": "block_door",
+      "color": "#8B6914",
+      "bgColor": "#6B4914",
+      "drop": { "itemId": 7, "minCount": 1, "maxCount": 1, "chance": 1.0 }
+    },
+    "20": {
+      "name": "apple_tree",
+      "solid": true,
+      "foreground": true,
+      "platform": false,
+      "background": false,
+      "health": 10,
+      "unbreakable": false,
+      "texture": "block_tree_apple",
+      "color": "#2D6B1E",
+      "bgColor": "#1B4D0E",
+      "drop": { "itemId": 20, "minCount": 1, "maxCount": 2, "chance": 1.0 }
+    },
+    "21": {
+      "name": "pine_tree",
+      "solid": true,
+      "foreground": true,
+      "platform": false,
+      "background": false,
+      "health": 10,
+      "unbreakable": false,
+      "texture": "block_tree_pine",
+      "color": "#1B4D0E",
+      "bgColor": "#0A2D04",
+      "drop": { "itemId": 21, "minCount": 1, "maxCount": 2, "chance": 1.0 }
     }
   },
 
@@ -114,6 +208,14 @@
       "texture": "item_platform",
       "color": "#A07040"
     },
+    "7": {
+      "name": "Door",
+      "itemType": "block",
+      "blockId": 7,
+      "maxStack": 200,
+      "texture": "item_door",
+      "color": "#8B6914"
+    },
     "10": {
       "name": "Apple Seed",
       "itemType": "seed",
@@ -142,8 +244,7 @@
       "blockId": 20,
       "maxStack": 200,
       "texture": "block_tree_apple",
-      "color": "#2D6B1E",
-      "fruitItemId": 30
+      "color": "#2D6B1E"
     },
     "21": {
       "name": "Pine Tree",
@@ -151,8 +252,7 @@
       "blockId": 21,
       "maxStack": 200,
       "texture": "block_tree_pine",
-      "color": "#1B4D0E",
-      "fruitItemId": 31
+      "color": "#1B4D0E"
     },
     "30": {
       "name": "Apple",
@@ -180,23 +280,130 @@
     }
   },
 
+  "inventory": {
+    "hotbarSlots": 10,
+    "totalSlots": 40,
+    "slotSize": 48,
+    "startingItems": [
+      { "itemId": 1, "count": 50 },
+      { "itemId": 3, "count": 50 },
+      { "itemId": 4, "count": 20 },
+      { "itemId": 10, "count": 2 },
+      { "itemId": 100, "count": 10 }
+    ]
+  },
+
   "farming": {
     "seedGrowthMultiplier": 1.0,
+    "maxHarvestsPerTree": 4,
+    "harvestCooldownMs": 1000,
+    "regrowTimeMs": 30000,
+    "harvestFruitMin": 1,
+    "harvestFruitMax": 3,
+    "treeTrunkHeight": 3,
+    "treeCrownWidth": 2,
+    "treeCrownHeight": 2,
     "splicingRecipes": [
       {
         "name": "Dirt with Grass",
         "seedA": 10,
         "seedB": 11,
-        "resultBlockId": 2,
-        "resultItemId": 2
+        "resultItemId": 2,
+        "description": "Apple Seed + Pinecone = Dirt with Grass"
+      },
+      {
+        "name": "Cave Rock",
+        "seedA": 10,
+        "seedB": 10,
+        "resultItemId": 3,
+        "description": "Apple Seed + Apple Seed = Rock"
+      },
+      {
+        "name": "Wood Platform",
+        "seedA": 11,
+        "seedB": 11,
+        "resultItemId": 4,
+        "description": "Pinecone + Pinecone = Wood Platform"
+      },
+      {
+        "name": "Door",
+        "seedA": 10,
+        "seedB": 3,
+        "resultItemId": 7,
+        "description": "Apple Seed + Rock (item) = Door"
+      },
+      {
+        "name": "Dirt",
+        "seedA": 11,
+        "seedB": 2,
+        "resultItemId": 1,
+        "description": "Pinecone + Dirt with Grass = Dirt"
       }
     ]
   },
 
   "rng": {
     "gemDropChance": 0.05,
+    "gemDropMin": 1,
+    "gemDropMax": 5,
     "seedDropChance": 0.15,
     "fruitDropChance": 0.30,
     "extraDropChance": 0.10
+  },
+
+  "itemsDrop": {
+    "despawnTimeMs": 180000,
+    "despawnFadeMs": 5000,
+    "playerDropDespawnTimeMs": 0,
+    "autoPickupRangeTiles": 2.5,
+    "magnetSpeed": 200,
+    "bounceUpVelocity": -200
+  },
+
+  "ui": {
+    "hotbarY": 560,
+    "hotbarSpacing": 52,
+    "hotbarBgColor": "#00000088",
+    "hotbarBorderColor": "#ffffff",
+    "hotbarSelectedColor": "#ffd700",
+    "tooltipBgColor": "#000000cc",
+    "tooltipTextColor": "#ffffff",
+    "debugTextEnabled": true
+  },
+
+  "sfx": {
+    "punchHitHz": 200,
+    "punchHitDurationMs": 60,
+    "punchBreakHz": 80,
+    "punchBreakDurationMs": 120,
+    "placeHz": 400,
+    "placeDurationMs": 80,
+    "collectHz": 600,
+    "collectDurationMs": 100,
+    "errorHz": 150,
+    "errorDurationMs": 150
+  },
+
+  "effects": {
+    "screenShakeIntensity": 2,
+    "screenShakeDurationMs": 100,
+    "particleCount": 5,
+    "particleCountBreak": 12,
+    "particleSpeedMin": 30,
+    "particleSpeedMax": 100,
+    "particleLifetimeMs": 400
+  },
+
+  "animation": {
+    "idleFrameCount": 2,
+    "idleFrameRate": 3,
+    "runFrameCount": 4,
+    "runFrameRate": 10,
+    "jumpFrameCount": 1,
+    "punchFrameCount": 2,
+    "punchFrameRate": 8,
+    "punchFistTilesReach": 1.2,
+    "punchFistDurationMs": 200,
+    "punchFistRetractMs": 100
   }
 }
