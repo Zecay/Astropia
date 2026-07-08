@@ -1,0 +1,202 @@
+{
+  "_header": "Astropia – Centralized Configuration",
+  "_note": "Modify values here to tweak gameplay. NO magic numbers in JS files.",
+
+  "game": {
+    "name": "Astropia",
+    "version": "0.1.0",
+    "repository": "https://github.com/Zecay/Astropia"
+  },
+
+  "physics": {
+    "gravity": 1800,
+    "playerMaxSpeedX": 260,
+    "playerAccelerationX": 2800,
+    "playerDragX": 2600,
+    "playerMaxSpeedY": 800,
+    "jumpVelocity": -550,
+    "playerReachTiles": 4
+  },
+
+  "world": {
+    "tileSize": 32,
+    "worldWidthTiles": 100,
+    "worldHeightTiles": 60,
+    "backgroundColor": "#5c94fc",
+    "skyColor": "#87CEEB",
+    "spawnTileX": 50,
+    "spawnTileY": 20,
+    "groundLevel": 40
+  },
+
+  "blocks": {
+    "0": {
+      "name": "air",
+      "solid": false,
+      "foreground": false,
+      "platform": false,
+      "health": 0,
+      "texture": "",
+      "drop": null
+    },
+    "1": {
+      "name": "dirt",
+      "solid": true,
+      "foreground": true,
+      "platform": false,
+      "health": 6,
+      "texture": "block_dirt",
+      "color": "#8B5E3C",
+      "drop": { "itemId": 1, "minCount": 1, "maxCount": 1, "chance": 1.0 }
+    },
+    "2": {
+      "name": "dirt_with_grass",
+      "solid": true,
+      "foreground": true,
+      "platform": false,
+      "health": 6,
+      "texture": "block_grass",
+      "color": "#5B8C2A",
+      "drop": { "itemId": 2, "minCount": 1, "maxCount": 1, "chance": 1.0 }
+    },
+    "3": {
+      "name": "rock",
+      "solid": true,
+      "foreground": true,
+      "platform": false,
+      "health": 12,
+      "texture": "block_rock",
+      "color": "#7A7A7A",
+      "drop": { "itemId": 3, "minCount": 1, "maxCount": 1, "chance": 1.0 }
+    },
+    "4": {
+      "name": "wood_platform",
+      "solid": false,
+      "foreground": false,
+      "platform": true,
+      "health": 8,
+      "texture": "block_platform",
+      "color": "#A07040",
+      "drop": { "itemId": 4, "minCount": 1, "maxCount": 1, "chance": 1.0 }
+    }
+  },
+
+  "items": {
+    "1": {
+      "name": "Dirt",
+      "itemType": "block",
+      "blockId": 1,
+      "maxStack": 200,
+      "texture": "item_dirt",
+      "color": "#8B5E3C"
+    },
+    "2": {
+      "name": "Dirt with Grass",
+      "itemType": "block",
+      "blockId": 2,
+      "maxStack": 200,
+      "texture": "item_grass",
+      "color": "#5B8C2A"
+    },
+    "3": {
+      "name": "Rock",
+      "itemType": "block",
+      "blockId": 3,
+      "maxStack": 200,
+      "texture": "item_rock",
+      "color": "#7A7A7A"
+    },
+    "4": {
+      "name": "Wood Platform",
+      "itemType": "block",
+      "blockId": 4,
+      "maxStack": 200,
+      "texture": "item_platform",
+      "color": "#A07040"
+    },
+    "10": {
+      "name": "Apple Seed",
+      "itemType": "seed",
+      "blockId": null,
+      "maxStack": 200,
+      "texture": "item_seed_apple",
+      "color": "#6B4226",
+      "growsIntoTreeBlockId": 20,
+      "growthTimeMs": 60000,
+      "fruitItemId": 30
+    },
+    "11": {
+      "name": "Pinecone",
+      "itemType": "seed",
+      "blockId": null,
+      "maxStack": 200,
+      "texture": "item_seed_pine",
+      "color": "#4A3520",
+      "growsIntoTreeBlockId": 21,
+      "growthTimeMs": 90000,
+      "fruitItemId": 31
+    },
+    "20": {
+      "name": "Apple Tree",
+      "itemType": "block",
+      "blockId": 20,
+      "maxStack": 200,
+      "texture": "block_tree_apple",
+      "color": "#2D6B1E",
+      "fruitItemId": 30
+    },
+    "21": {
+      "name": "Pine Tree",
+      "itemType": "block",
+      "blockId": 21,
+      "maxStack": 200,
+      "texture": "block_tree_pine",
+      "color": "#1B4D0E",
+      "fruitItemId": 31
+    },
+    "30": {
+      "name": "Apple",
+      "itemType": "fruit",
+      "blockId": null,
+      "maxStack": 200,
+      "texture": "item_apple",
+      "color": "#FF3333"
+    },
+    "31": {
+      "name": "Pinecone",
+      "itemType": "fruit",
+      "blockId": null,
+      "maxStack": 200,
+      "texture": "item_pinecone",
+      "color": "#8B6F47"
+    },
+    "100": {
+      "name": "Gem",
+      "itemType": "currency",
+      "blockId": null,
+      "maxStack": 99999,
+      "texture": "item_gem",
+      "color": "#00FFCC"
+    }
+  },
+
+  "farming": {
+    "seedGrowthMultiplier": 1.0,
+    "splicingRecipes": [
+      {
+        "name": "Dirt with Grass",
+        "seedA": 10,
+        "seedB": 11,
+        "resultBlockId": 2,
+        "resultItemId": 2
+      }
+    ]
+  },
+
+  "rng": {
+    "gemDropChance": 0.05,
+    "seedDropChance": 0.15,
+    "fruitDropChance": 0.30,
+    "extraDropChance": 0.10
+  }
+}

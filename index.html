@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Astropia</title>
+  <link rel="stylesheet" href="css/style.css" />
+
+  <!-- Phaser 3 (latest stable) -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <!--
+    ─── BOOT ORDER ───────────────────────────
+    1. PacketTypes – shared constants
+    2. main.js – fetches config.json, creates Phaser.Game
+    3. Scenes are registered inside main.js dynamically
+  -->
+  <script src="js/shared/PacketTypes.js"></script>
+  <script src="js/client/scenes/BootScene.js"></script>
+  <script src="js/client/scenes/LoadScene.js"></script>
+  <script src="js/client/scenes/GameScene.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
