@@ -63,13 +63,17 @@ Navigate to [http://localhost:8080](http://localhost:8080)
 
 ### 3. Play
 
-| Action                | Input                  |
-|-----------------------|------------------------|
-| Move left / right     | `← →` / `A D`         |
-| Jump                  | `Space` / `↑`         |
-| Punch / break block   | Left-click             |
-| Build / place block   | Right-click            |
-| Cycle inventory slot  | (Coming)               |
+| Action                | Input                        |
+|-----------------------|------------------------------|
+| Move left / right     | `← →` / `A D`               |
+| Jump                  | `Space` / `↑` / `W`         |
+| Smart left-click      | Fist=punch, Block=place, ... |
+| Select hotbar slot    | `0`-`9`                     |
+| Cycle hotbar          | `Tab` / `Shift+Tab` / Wheel |
+| Toggle Fist/Wrench    | `F`                          |
+| Open inventory        | `I`                          |
+| Close inventory       | `I` / `Esc`                  |
+| Chat (stub)           | `Enter`                      |
 
 ---
 

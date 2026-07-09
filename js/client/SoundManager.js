@@ -45,7 +45,8 @@ class SoundManager {
 
   /**
    * Play a sound effect by name.
-   * Supported names: 'punchHit', 'punchBreak', 'place', 'collect', 'error'
+   * Supported names: 'punchHit', 'punchBreak', 'place', 'collect',
+   *                  'error', 'select', 'wrench', 'hurt', 'land'
    */
   play(name) {
     if (this.muted) return;
@@ -58,6 +59,10 @@ class SoundManager {
       case 'place':       this._tone(this.sfxConfig.placeHz, this.sfxConfig.placeDurationMs, 'sine', 0.2); break;
       case 'collect':     this._tone(this.sfxConfig.collectHz, this.sfxConfig.collectDurationMs, 'sine', 0.25); break;
       case 'error':       this._tone(this.sfxConfig.errorHz, this.sfxConfig.errorDurationMs, 'sawtooth', 0.15); break;
+      case 'select':      this._tone(this.sfxConfig.selectHz, this.sfxConfig.selectDurationMs, 'sine', 0.15); break;
+      case 'wrench':      this._tone(this.sfxConfig.wrenchHz, this.sfxConfig.wrenchDurationMs, 'triangle', 0.2); break;
+      case 'hurt':        this._noiseBurst(this.sfxConfig.hurtDurationMs, 0.35); break;
+      case 'land':        this._tone(this.sfxConfig.landHz, this.sfxConfig.landDurationMs, 'triangle', this.sfxConfig.landVolume || 0.1); break;
       default:
         console.warn(`[SoundManager] Unknown sound: "${name}"`);
     }

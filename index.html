@@ -15,14 +15,16 @@
   <!--
     ─── BOOT ORDER ───────────────────────────
     1. Shared constants
-    2. Client modules (SoundManager, then scenes)
+    2. Client modules (SoundManager, PlayerInventory, then scenes)
     3. main.js – fetches config.json, creates Phaser.Game
   -->
   <script src="js/shared/PacketTypes.js"></script>
   <script src="js/client/SoundManager.js"></script>
+  <script src="js/client/PlayerInventory.js"></script>
   <script src="js/client/scenes/BootScene.js"></script>
   <script src="js/client/scenes/LoadScene.js"></script>
   <script src="js/client/scenes/GameScene.js"></script>
+  <script src="js/client/scenes/UIScene.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

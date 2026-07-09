@@ -4,7 +4,7 @@
 
   "game": {
     "name": "Astropia",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "repository": "https://github.com/Zecay/Astropia"
   },
 
@@ -17,13 +17,12 @@
     "jumpVelocity": -700,
     "playerWidthTiles": 0.75,
     "playerHeightTiles": 1.0,
-    "playerReachTiles": 4,
+    "playerReachTiles": 3,
     "airControl": 1.0,
     "coyoteTimeMs": 80,
     "jumpBufferMs": 100,
     "punchCooldownMs": 350,
-    "punchReachTiles": 4,
-    "blockRegenMs": 5000
+    "punchReachTiles": 3
   },
 
   "world": {
@@ -33,8 +32,11 @@
     "backgroundColor": "#5c94fc",
     "skyColor": "#87CEEB",
     "spawnTileX": 50,
-    "spawnTileY": 20,
+    "spawnAboveGroundTiles": 3,
     "groundLevel": 40,
+    "bedrockRows": 6,
+    "dirtLayerRows": 4,
+    "rockChance": 0.05,
     "cameraDeadzoneWidth": 160,
     "cameraDeadzoneHeight": 60
   },
@@ -56,6 +58,7 @@
       "background": false,
       "health": 0,
       "unbreakable": false,
+      "painBlock": false,
       "blocksGrassGrowth": false,
       "texture": "",
       "drop": null
@@ -66,14 +69,21 @@
       "foreground": true,
       "platform": false,
       "background": false,
-      "health": 6,
+      "health": 3,
       "unbreakable": false,
+      "painBlock": false,
       "blocksGrassGrowth": true,
       "texture": "block_dirt",
       "color": "#8B5E3C",
       "grassColor": "#5B8C2A",
       "bgColor": "#5A3C26",
-      "drop": { "itemId": 1, "minCount": 1, "maxCount": 1, "chance": 1.0 }
+      "regenMs": 5000,
+      "drop": { "itemId": 1, "count": 1 },
+      "seedDrop": { "itemId": 10, "chance": 0.25, "count": 1 },
+      "gemDrops": [
+        { "count": 1, "chance": 0.04 },
+        { "count": 2, "chance": 0.01 }
+      ]
     },
     "3": {
       "name": "rock",
@@ -81,44 +91,21 @@
       "foreground": true,
       "platform": false,
       "background": false,
-      "health": 12,
+      "health": 10,
       "unbreakable": false,
+      "painBlock": false,
       "blocksGrassGrowth": true,
       "texture": "block_rock",
-      "color": "#7A7A7A",
-      "grassColor": "#7A7A7A",
+      "color": "#808080",
+      "grassColor": "#808080",
       "bgColor": "#555555",
-      "drop": { "itemId": 3, "minCount": 1, "maxCount": 1, "chance": 1.0 }
-    },
-    "4": {
-      "name": "wood_platform",
-      "solid": false,
-      "foreground": false,
-      "platform": true,
-      "background": false,
-      "health": 8,
-      "unbreakable": false,
-      "blocksGrassGrowth": false,
-      "texture": "block_platform",
-      "color": "#A07040",
-      "grassColor": "#A07040",
-      "bgColor": "#70502A",
-      "drop": { "itemId": 4, "minCount": 1, "maxCount": 1, "chance": 1.0 }
-    },
-    "5": {
-      "name": "cloud",
-      "solid": false,
-      "foreground": false,
-      "platform": false,
-      "background": false,
-      "health": 1,
-      "unbreakable": false,
-      "blocksGrassGrowth": false,
-      "texture": "block_cloud",
-      "color": "#FFFFFF",
-      "grassColor": "#FFFFFF",
-      "bgColor": "#DDDDDD",
-      "drop": null
+      "regenMs": 8000,
+      "drop": { "itemId": 3, "count": 1 },
+      "seedDrop": { "itemId": 11, "chance": 0.15, "count": 1 },
+      "gemDrops": [
+        { "count": 1, "chance": 0.10 },
+        { "count": 2, "chance": 0.03 }
+      ]
     },
     "6": {
       "name": "bedrock",
@@ -128,27 +115,38 @@
       "background": false,
       "health": 999999,
       "unbreakable": true,
+      "painBlock": false,
       "blocksGrassGrowth": false,
       "texture": "block_bedrock",
-      "color": "#2A2A2A",
-      "grassColor": "#2A2A2A",
+      "color": "#3A3A3A",
+      "grassColor": "#3A3A3A",
       "bgColor": "#1A1A1A",
+      "regenMs": 0,
       "drop": null
     },
-    "7": {
-      "name": "door",
-      "solid": false,
+    "9": {
+      "name": "lava",
+      "solid": true,
       "foreground": true,
       "platform": false,
       "background": false,
-      "health": 20,
+      "health": 4,
       "unbreakable": false,
+      "painBlock": true,
+      "damagePerSecond": 20,
       "blocksGrassGrowth": false,
-      "texture": "block_door",
-      "color": "#8B6914",
-      "grassColor": "#8B6914",
-      "bgColor": "#6B4914",
-      "drop": { "itemId": 7, "minCount": 1, "maxCount": 1, "chance": 1.0 }
+      "texture": "block_lava",
+      "color": "#FF2811",
+      "glowColor": "#FFBB2A",
+      "bgColor": "#8B0000",
+      "regenMs": 5000,
+      "drop": { "itemId": 9, "count": 1 },
+      "seedDrop": { "itemId": 12, "chance": 0.10, "count": 1 },
+      "gemDrops": [
+        { "count": 1, "chance": 0.05 },
+        { "count": 2, "chance": 0.05 },
+        { "count": 3, "chance": 0.05 }
+      ]
     }
   },
 
@@ -167,61 +165,72 @@
       "blockId": 3,
       "maxStack": 200,
       "texture": "item_rock",
-      "color": "#7A7A7A"
+      "color": "#808080"
     },
-    "4": {
-      "name": "Wood Platform",
+    "9": {
+      "name": "Lava",
       "itemType": "block",
-      "blockId": 4,
+      "blockId": 9,
       "maxStack": 200,
-      "texture": "item_platform",
-      "color": "#A07040"
-    },
-    "7": {
-      "name": "Door",
-      "itemType": "block",
-      "blockId": 7,
-      "maxStack": 200,
-      "texture": "item_door",
-      "color": "#8B6914"
+      "texture": "item_lava",
+      "color": "#FF2811"
     },
     "10": {
-      "name": "Apple Seed",
+      "name": "Dirt Seed",
       "itemType": "seed",
       "blockId": null,
       "maxStack": 200,
-      "texture": "item_seed_apple",
+      "texture": "item_seed_dirt",
       "color": "#6B4226",
       "growsIntoTreeBlockId": 20,
-      "growthTimeMs": 60000,
-      "fruitItemId": 30
+      "growthTimeMs": 60000
     },
     "11": {
-      "name": "Pinecone",
+      "name": "Rock Seed",
       "itemType": "seed",
       "blockId": null,
       "maxStack": 200,
-      "texture": "item_seed_pine",
-      "color": "#4A3520",
+      "texture": "item_seed_rock",
+      "color": "#4A4A4A",
       "growsIntoTreeBlockId": 21,
-      "growthTimeMs": 90000,
-      "fruitItemId": 31
+      "growthTimeMs": 90000
     },
-    "30": {
-      "name": "Apple",
-      "itemType": "fruit",
+    "12": {
+      "name": "Lava Seed",
+      "itemType": "seed",
       "blockId": null,
       "maxStack": 200,
-      "texture": "item_apple",
-      "color": "#FF3333"
+      "texture": "item_seed_lava",
+      "color": "#FF4422",
+      "growsIntoTreeBlockId": 22,
+      "growthTimeMs": 120000
     },
-    "31": {
-      "name": "Pinecone",
-      "itemType": "fruit",
-      "blockId": null,
+    "20": {
+      "name": "Dirt Tree",
+      "itemType": "block",
+      "blockId": 20,
       "maxStack": 200,
-      "texture": "item_pinecone",
-      "color": "#8B6F47"
+      "texture": "item_dirt_tree",
+      "color": "#5B8C2A",
+      "rarity": 1
+    },
+    "21": {
+      "name": "Rock Tree",
+      "itemType": "block",
+      "blockId": 21,
+      "maxStack": 200,
+      "texture": "item_rock_tree",
+      "color": "#6A8C4A",
+      "rarity": 1
+    },
+    "22": {
+      "name": "Lava Tree",
+      "itemType": "block",
+      "blockId": 22,
+      "maxStack": 200,
+      "texture": "item_lava_tree",
+      "color": "#FF6633",
+      "rarity": 1
     },
     "100": {
       "name": "Gem",
@@ -238,12 +247,9 @@
     "totalSlots": 40,
     "slotSize": 48,
     "startingItems": [
-      { "itemId": 1, "count": 50 },
-      { "itemId": 3, "count": 50 },
-      { "itemId": 4, "count": 20 },
-      { "itemId": 10, "count": 2 },
-      { "itemId": 100, "count": 10 }
-    ]
+      { "itemId": 1, "count": 50 }
+    ],
+    "startingGems": 10
   },
 
   "farming": {
@@ -256,37 +262,27 @@
     "treeTrunkHeight": 3,
     "treeCrownWidth": 2,
     "treeCrownHeight": 2,
-    "splicingRecipes": [
-      {
-        "name": "Dirt with Grass",
-        "seedA": 10,
-        "seedB": 11,
-        "resultItemId": 1,
-        "description": "Apple Seed + Pinecone = Dirt"
-      }
-    ]
+    "splicingRecipes": []
   },
 
   "rng": {
-    "gemDropChance": 0.05,
-    "gemDropMin": 1,
-    "gemDropMax": 5,
-    "seedDropChance": 0.15,
-    "fruitDropChance": 0.30,
-    "extraDropChance": 0.10
+    "dirtSeedChance": 0.25,
+    "rockSeedChance": 0.15,
+    "lavaSeedChance": 0.10
   },
 
   "itemsDrop": {
-    "despawnTimeMs": 180000,
-    "despawnFadeMs": 5000,
-    "playerDropDespawnTimeMs": 0,
-    "autoPickupRangeTiles": 2.5,
+    "bounceUpVelocity": -200,
+    "magnetRangePx": 80,
     "magnetSpeed": 200,
-    "bounceUpVelocity": -200
+    "bobAmplitude": 2,
+    "bobDurationMs": 800,
+    "spinSpeed": 0.5
   },
 
   "ui": {
     "hotbarY": 560,
+    "hotbarX": 0,
     "hotbarSpacing": 52,
     "hotbarBgColor": "#00000088",
     "hotbarBorderColor": "#ffffff",
@@ -294,7 +290,14 @@
     "tooltipBgColor": "#000000cc",
     "tooltipTextColor": "#ffffff",
     "debugTextEnabled": true,
-    "placeGhostAlpha": 0.4
+    "placeGhostAlpha": 0.4,
+    "gemCounterPadding": 12,
+    "tooltipFadeMs": 2000,
+    "floatingTextRisePx": 40,
+    "floatingTextDurationMs": 800,
+    "inventoryPanelBg": "#000000dd",
+    "inventorySlotsPerRow": 8,
+    "inventorySlotSize": 44
   },
 
   "sfx": {
@@ -307,17 +310,27 @@
     "collectHz": 600,
     "collectDurationMs": 100,
     "errorHz": 150,
-    "errorDurationMs": 150
+    "errorDurationMs": 150,
+    "selectHz": 800,
+    "selectDurationMs": 50,
+    "wrenchHz": 440,
+    "wrenchDurationMs": 80,
+    "hurtHz": 100,
+    "hurtDurationMs": 200,
+    "landHz": 100,
+    "landDurationMs": 80,
+    "landVolume": 0.1
   },
 
   "effects": {
-    "screenShakeIntensity": 2,
+    "screenShakeIntensity": 0.002,
     "screenShakeDurationMs": 100,
     "particleCount": 5,
     "particleCountBreak": 12,
     "particleSpeedMin": 30,
     "particleSpeedMax": 100,
-    "particleLifetimeMs": 400
+    "particleLifetimeMs": 400,
+    "landingDustCount": 3
   },
 
   "animation": {

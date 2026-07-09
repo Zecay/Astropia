@@ -4,7 +4,7 @@
  *
  * Generates ALL placeholder textures programmatically.
  * Includes player animations (1-tile tall chibi style), crack overlays,
- * blocks, items, gems, fruits, seeds.
+ * blocks, items, gems, seeds, wrench icon, lava spritesheet.
  *
  * No external image assets required. Uses Phaser 3 Graphics API only.
  */
@@ -58,10 +58,13 @@ class LoadScene extends Phaser.Scene {
     /* ─── Fist texture ─── */
     this._generateFistTexture(12);
 
+    /* ─── Wrench icon ─── */
+    this._generateWrenchTexture(16);
+
     /* ─── Crack overlays (3 stages) ─── */
     this._generateCrackTextures(TS);
 
-    /* ─── Blocks (dirt has both plain and grass textures) ─── */
+    /* ─── Blocks (includes lava spritesheet) ─── */
     this._generateBlockTextures(config, TS);
 
     /* ─── Items ─── */
@@ -69,9 +72,6 @@ class LoadScene extends Phaser.Scene {
 
     /* ─── Gem ─── */
     this._generateGemTexture(20);
-
-    /* ─── Fruits ─── */
-    this._generateFruitTextures(config, 20);
 
     /* ─── Seeds ─── */
     this._generateSeedTextures(config, 20);
@@ -307,6 +307,31 @@ class LoadScene extends Phaser.Scene {
   }
 
   /* ═══════════════════════════════════════════════════════════════
+     WRENCH TEXTURE
+     ═══════════════════════════════════════════════════════════════ */
+
+  _generateWrenchTexture(size) {
+    const g = this.make.graphics({ add: false });
+    /* Handle */
+    g.fillStyle(0x888888, 1);
+    g.fillRect(5, 2, 4, 10);
+    g.fillStyle(0xAAAAAA, 1);
+    g.fillRect(6, 2, 1, 10);
+    /* Jaw */
+    g.fillStyle(0x888888, 1);
+    g.fillRect(2, 9, 10, 5);
+    g.fillStyle(0xAAAAAA, 1);
+    g.fillRect(2, 9, 10, 1);
+    /* Jaw gap */
+    g.fillStyle(0x000000, 0.5);
+    g.fillRect(5, 9, 3, 5);
+    g.lineStyle(1, 0x333333, 0.6);
+    g.strokeRect(2, 9, 10, 5);
+    g.generateTexture('wrench', size, size);
+    g.destroy();
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
      CRACK OVERLAYS (3 stages)
      ═══════════════════════════════════════════════════════════════ */
 
@@ -356,72 +381,153 @@ class LoadScene extends Phaser.Scene {
     for (const [id, block] of Object.entries(blocks)) {
       if (!block.texture || block.texture === '') continue;
 
-      const g = this.make.graphics({ add: false });
-      const color = Phaser.Display.Color.HexStringToColor(block.color || '#888888').color;
+      const numId = Number(id);
 
-      if (block.platform) {
-        g.fillStyle(color, 1);
-        g.fillRect(0, 0, TS, 6);
-        g.fillRect(4, 0, 4, TS);
-        g.fillRect(TS - 8, 0, 4, TS);
-        g.lineStyle(1, 0x000000, 0.15);
-        g.lineBetween(0, 2, TS, 2);
-        g.lineBetween(0, 4, TS, 4);
-      } else if (Number(id) === 1) {
-        /* Dirt: generate TWO textures (plain dirt + grass-topped) */
-        /* Plain dirt */
-        g.fillStyle(color, 1);
-        g.fillRect(1, 1, TS - 2, TS - 2);
-        g.lineStyle(1, 0x000000, 0.3);
-        g.strokeRect(1, 1, TS - 2, TS - 2);
-        const lighter = Phaser.Display.Color.IntegerToColor(color);
-        lighter.lighten(20);
-        g.lineStyle(1, lighter.color, 0.3);
-        g.lineBetween(1, 1, TS - 2, 1);
-        g.lineBetween(1, 1, 1, TS - 2);
-        const darker = Phaser.Display.Color.IntegerToColor(color);
-        darker.darken(20);
-        g.lineStyle(1, darker.color, 0.3);
-        g.lineBetween(TS - 2, 1, TS - 2, TS - 2);
-        g.lineBetween(1, TS - 2, TS - 2, TS - 2);
-        g.generateTexture('block_dirt', TS, TS);
-        g.clear();
-
-        /* Grass-topped dirt: same as dirt but with green strip on top */
-        const grassColor = Phaser.Display.Color.HexStringToColor(block.grassColor || '#5B8C2A').color;
-        g.fillStyle(color, 1);
-        g.fillRect(1, 1, TS - 2, TS - 2);
-        g.fillStyle(grassColor, 1);
-        g.fillRect(1, 1, TS - 2, 6);
-        g.lineStyle(1, 0x000000, 0.3);
-        g.strokeRect(1, 1, TS - 2, TS - 2);
-        g.lineStyle(1, lighter.color, 0.3);
-        g.lineBetween(1, 1, TS - 2, 1);
-        g.lineBetween(1, 1, 1, TS - 2);
-        g.lineStyle(1, darker.color, 0.3);
-        g.lineBetween(TS - 2, 1, TS - 2, TS - 2);
-        g.lineBetween(1, TS - 2, TS - 2, TS - 2);
-        g.generateTexture('block_grass', TS, TS);
+      if (numId === 1) {
+        this._generateDirtTextures(block, TS);
+      } else if (numId === 9) {
+        this._generateLavaSpritesheet(block, TS);
+      } else if (numId === 6) {
+        this._generateBedrockTexture(block, TS);
       } else {
-        g.fillStyle(color, 1);
-        g.fillRect(1, 1, TS - 2, TS - 2);
-        g.lineStyle(1, 0x000000, 0.3);
-        g.strokeRect(1, 1, TS - 2, TS - 2);
-        const lighter = Phaser.Display.Color.IntegerToColor(color);
-        lighter.lighten(20);
-        g.lineStyle(1, lighter.color, 0.3);
-        g.lineBetween(1, 1, TS - 2, 1);
-        g.lineBetween(1, 1, 1, TS - 2);
-        const darker = Phaser.Display.Color.IntegerToColor(color);
-        darker.darken(20);
-        g.lineStyle(1, darker.color, 0.3);
-        g.lineBetween(TS - 2, 1, TS - 2, TS - 2);
-        g.lineBetween(1, TS - 2, TS - 2, TS - 2);
-        g.generateTexture(block.texture, TS, TS);
+        this._generateGenericBlockTexture(block, TS);
       }
-
-      g.destroy();
     }
+  }
+
+  _generateDirtTextures(block, TS) {
+    const g = this.make.graphics({ add: false });
+    const color = Phaser.Display.Color.HexStringToColor(block.color || '#888888').color;
+    const lighter = Phaser.Display.Color.IntegerToColor(color);
+    lighter.lighten(20);
+    const darker = Phaser.Display.Color.IntegerToColor(color);
+    darker.darken(20);
+
+    /* Plain dirt */
+    g.fillStyle(color, 1);
+    g.fillRect(1, 1, TS - 2, TS - 2);
+    g.lineStyle(1, 0x000000, 0.3);
+    g.strokeRect(1, 1, TS - 2, TS - 2);
+    g.lineStyle(1, lighter.color, 0.3);
+    g.lineBetween(1, 1, TS - 2, 1);
+    g.lineBetween(1, 1, 1, TS - 2);
+    g.lineStyle(1, darker.color, 0.3);
+    g.lineBetween(TS - 2, 1, TS - 2, TS - 2);
+    g.lineBetween(1, TS - 2, TS - 2, TS - 2);
+    g.generateTexture('block_dirt', TS, TS);
+    g.clear();
+
+    /* Grass-topped dirt */
+    const grassColor = Phaser.Display.Color.HexStringToColor(block.grassColor || '#5B8C2A').color;
+    g.fillStyle(color, 1);
+    g.fillRect(1, 1, TS - 2, TS - 2);
+    g.fillStyle(grassColor, 1);
+    g.fillRect(1, 1, TS - 2, 6);
+    g.lineStyle(1, 0x000000, 0.3);
+    g.strokeRect(1, 1, TS - 2, TS - 2);
+    g.lineStyle(1, lighter.color, 0.3);
+    g.lineBetween(1, 1, TS - 2, 1);
+    g.lineBetween(1, 1, 1, TS - 2);
+    g.lineStyle(1, darker.color, 0.3);
+    g.lineBetween(TS - 2, 1, TS - 2, TS - 2);
+    g.lineBetween(1, TS - 2, TS - 2, TS - 2);
+    g.generateTexture('block_grass', TS, TS);
+    g.destroy();
+  }
+
+  _generateLavaSpritesheet(block, TS) {
+    const color = Phaser.Display.Color.HexStringToColor(block.color || '#FF2811').color;
+    const glowColor = Phaser.Display.Color.HexStringToColor(block.glowColor || '#FFBB2A').color;
+
+    /* Generate two frames (lava_a and lava_b) as a spritesheet for pulse animation */
+    this._generateSpritesheet('block_lava', TS, TS, 2, (g, frame) => {
+      /* Base fill */
+      g.fillStyle(color, 1);
+      g.fillRect(0, 0, TS, TS);
+
+      /* Glow aura — semi-transparent radial gradient simulated with concentric rects */
+      const glowAlpha = frame === 0 ? 0.5 : 0.3;
+      g.fillStyle(glowColor, glowAlpha);
+      g.fillRect(2, 2, TS - 4, TS - 4);
+
+      /* Inner bright highlight — flickers between frames */
+      const innerAlpha = frame === 0 ? 0.7 : 0.9;
+      g.fillStyle(glowColor, innerAlpha);
+      g.fillRect(6, 6, TS - 12, TS - 12);
+
+      /* Hot center */
+      const centerAlpha = frame === 0 ? 0.9 : 0.6;
+      g.fillStyle(0xFFFF66, centerAlpha);
+      g.fillRect(10, 10, TS - 20, TS - 20);
+
+      /* Block border */
+      g.lineStyle(1, 0x000000, 0.4);
+      g.strokeRect(0, 0, TS, TS);
+
+      /* Crack lines on lava surface */
+      g.lineStyle(1, 0xFF4400, 0.3);
+      const offset = frame === 0 ? 0 : 2;
+      g.lineBetween(4 + offset, 8, 14, 10);
+      g.lineBetween(20, 6 + offset, 28, 14);
+      g.lineBetween(8, 22 - offset, 16, 24);
+      g.lineBetween(18 + offset, 20, 26, 26);
+    });
+  }
+
+  _generateBedrockTexture(block, TS) {
+    const color = Phaser.Display.Color.HexStringToColor(block.color || '#3A3A3A').color;
+    const g = this.make.graphics({ add: false });
+
+    /* Base fill */
+    g.fillStyle(color, 1);
+    g.fillRect(0, 0, TS, TS);
+
+    /* Darker speckles */
+    g.fillStyle(0x2A2A2A, 0.6);
+    for (let i = 0; i < 12; i++) {
+      const sx = 2 + Math.floor(Math.random() * (TS - 5));
+      const sy = 2 + Math.floor(Math.random() * (TS - 5));
+      g.fillRect(sx, sy, 3, 3);
+    }
+
+    /* Lighter specks */
+    g.fillStyle(0x4A4A4A, 0.4);
+    for (let i = 0; i < 8; i++) {
+      const sx = 2 + Math.floor(Math.random() * (TS - 4));
+      const sy = 2 + Math.floor(Math.random() * (TS - 4));
+      g.fillRect(sx, sy, 2, 2);
+    }
+
+    /* Border with highlight/shadow */
+    g.lineStyle(1, 0x000000, 0.4);
+    g.strokeRect(0, 0, TS, TS);
+    g.lineStyle(1, 0x555555, 0.3);
+    g.lineBetween(0, 0, TS - 1, 0);
+    g.lineBetween(0, 0, 0, TS - 1);
+
+    g.generateTexture(block.texture, TS, TS);
+    g.destroy();
+  }
+
+  _generateGenericBlockTexture(block, TS) {
+    const g = this.make.graphics({ add: false });
+    const color = Phaser.Display.Color.HexStringToColor(block.color || '#888888').color;
+    g.fillStyle(color, 1);
+    g.fillRect(1, 1, TS - 2, TS - 2);
+    g.lineStyle(1, 0x000000, 0.3);
+    g.strokeRect(1, 1, TS - 2, TS - 2);
+    const lighter = Phaser.Display.Color.IntegerToColor(color);
+    lighter.lighten(20);
+    g.lineStyle(1, lighter.color, 0.3);
+    g.lineBetween(1, 1, TS - 2, 1);
+    g.lineBetween(1, 1, 1, TS - 2);
+    const darker = Phaser.Display.Color.IntegerToColor(color);
+    darker.darken(20);
+    g.lineStyle(1, darker.color, 0.3);
+    g.lineBetween(TS - 2, 1, TS - 2, TS - 2);
+    g.lineBetween(1, TS - 2, TS - 2, TS - 2);
+    g.generateTexture(block.texture, TS, TS);
+    g.destroy();
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -432,18 +538,49 @@ class LoadScene extends Phaser.Scene {
     const items = config.items;
     for (const [id, item] of Object.entries(items)) {
       if (!item.texture || item.texture === '') continue;
-      if (item.texture.startsWith('block_')) continue;
-      if (item.texture.startsWith('item_seed_')) continue;
-      if (item.texture.startsWith('item_apple') || item.texture.startsWith('item_pinecone')) continue;
+      /* Skip items that are generated elsewhere */
       if (item.texture === 'item_gem') continue;
+      if (item.texture.startsWith('item_seed_')) continue;
 
       const g = this.make.graphics({ add: false });
       const color = Phaser.Display.Color.HexStringToColor(item.color || '#888888').color;
+
+      /* Background rounded rect */
       g.fillStyle(0x333355, 1);
       g.fillRoundedRect(0, 0, size, size, 3);
-      const inset = 3;
-      g.fillStyle(color, 1);
-      g.fillRect(inset, inset, size - inset * 2, size - inset * 2);
+
+      /* Item-type-specific drawing */
+      const numId = Number(id);
+      let itemType = item.itemType;
+
+      if (itemType === 'block') {
+        /* Block item: colored rounded square */
+        const inset = 3;
+        g.fillStyle(color, 1);
+        g.fillRoundedRect(inset, inset, size - inset * 2, size - inset * 2, 2);
+        /* Highlight edge */
+        const lighter = Phaser.Display.Color.IntegerToColor(color);
+        lighter.lighten(25);
+        g.lineStyle(1, lighter.color, 0.4);
+        g.strokeRoundedRect(inset, inset, size - inset * 2, size - inset * 2, 2);
+      } else if (itemType === 'currency') {
+        /* Gem shape */
+        const cx = size / 2, cy = size / 2 + 1, half = size / 2 - 3;
+        g.fillStyle(color, 1);
+        g.beginPath();
+        g.moveTo(cx, cy - half);
+        g.lineTo(cx + half, cy);
+        g.lineTo(cx, cy + half);
+        g.lineTo(cx - half, cy);
+        g.closePath();
+        g.fillPath();
+      } else {
+        /* Generic */
+        const inset = 3;
+        g.fillStyle(color, 1);
+        g.fillRect(inset, inset, size - inset * 2, size - inset * 2);
+      }
+
       g.generateTexture(item.texture, size, size);
       g.destroy();
     }
@@ -472,44 +609,13 @@ class LoadScene extends Phaser.Scene {
   }
 
   /* ═══════════════════════════════════════════════════════════════
-     FRUITS
-     ═══════════════════════════════════════════════════════════════ */
-
-  _generateFruitTextures(config, size) {
-    let g = this.make.graphics({ add: false });
-    g.fillStyle(0xff3333, 1);
-    g.fillCircle(size / 2, size / 2 + 1, size / 2 - 2);
-    g.fillStyle(0x4a2800, 1);
-    g.fillRect(size / 2 - 1, 2, 2, 5);
-    g.fillStyle(0x33aa33, 1);
-    g.fillTriangle(size / 2 - 3, 3, size / 2 - 6, 5, size / 2 - 1, 5);
-    g.generateTexture('item_apple', size, size);
-    g.destroy();
-
-    g = this.make.graphics({ add: false });
-    g.fillStyle(0x8B6F47, 1);
-    g.beginPath();
-    g.moveTo(size / 2, 1);
-    g.lineTo(size - 1, size / 2 + 2);
-    g.lineTo(size / 2, size - 1);
-    g.lineTo(0, size / 2 + 2);
-    g.closePath();
-    g.fillPath();
-    g.lineStyle(1, 0x6B4F27, 0.6);
-    for (let y = 5; y < size; y += 5) {
-      g.lineBetween(3, y, size - 3, y);
-    }
-    g.generateTexture('item_pinecone', size, size);
-    g.destroy();
-  }
-
-  /* ═══════════════════════════════════════════════════════════════
      SEEDS
      ═══════════════════════════════════════════════════════════════ */
 
   _generateSeedTextures(config, size) {
     const cx = size / 2, cy = size / 2;
 
+    /* Dirt Seed — brown oval */
     let g = this.make.graphics({ add: false });
     g.fillStyle(0x6B4226, 1);
     this._drawEllipse(g, cx, cy, size - 4, size - 6);
@@ -517,15 +623,40 @@ class LoadScene extends Phaser.Scene {
     g.fillStyle(0x4A2800, 1);
     this._drawEllipse(g, cx, cy + 1, size - 10, size - 12);
     g.fillPath();
-    g.generateTexture('item_seed_apple', size, size);
+    g.generateTexture('item_seed_dirt', size, size);
     g.destroy();
 
+    /* Rock Seed — gray triangle */
     g = this.make.graphics({ add: false });
-    g.fillStyle(0x4A3520, 1);
+    g.fillStyle(0x6A6A6A, 1);
     g.fillTriangle(size / 2, 2, 2, size - 2, size - 2, size - 2);
-    g.fillStyle(0x3A2510, 1);
-    g.fillTriangle(size / 2, 6, 6, size - 4, size - 6, size - 4);
-    g.generateTexture('item_seed_pine', size, size);
+    g.fillStyle(0x4A4A4A, 1);
+    g.fillTriangle(size / 2, 7, 6, size - 4, size - 6, size - 4);
+    g.lineStyle(1, 0x888888, 0.5);
+    g.lineBetween(size / 2, 3, 3, size - 3);
+    g.lineBetween(size / 2, 3, size - 3, size - 3);
+    g.generateTexture('item_seed_rock', size, size);
+    g.destroy();
+
+    /* Lava Seed — orange/red diamond */
+    g = this.make.graphics({ add: false });
+    g.fillStyle(0xFF4422, 1);
+    g.beginPath();
+    g.moveTo(cx, 2);
+    g.lineTo(size - 2, cy);
+    g.lineTo(cx, size - 2);
+    g.lineTo(2, cy);
+    g.closePath();
+    g.fillPath();
+    g.fillStyle(0xFFAA00, 1);
+    g.beginPath();
+    g.moveTo(cx, 6);
+    g.lineTo(size - 6, cy);
+    g.lineTo(cx, size - 6);
+    g.lineTo(6, cy);
+    g.closePath();
+    g.fillPath();
+    g.generateTexture('item_seed_lava', size, size);
     g.destroy();
   }
 
