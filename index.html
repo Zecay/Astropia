@@ -2,29 +2,2633 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Astropia</title>
-  <link rel="stylesheet" href="css/style.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Remixtest</title>
+  <script src="https://cdn.jsdelivr.net/npm/@remix-gg/sdk@latest/dist/index.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #87ceeb;
+      font-family: Arial, sans-serif;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
 
-  <!-- Phaser 3 (latest stable) -->
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+    body {
+      position: relative;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      background: linear-gradient(#8fd3ff, #dff4ff);
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+      outline: none;
+    }
+
+    #hud { display: none; }
+    #hudInner { display: none; }
+    .panel { display: none; }
+
+    #inventoryUIGroup {
+      position: fixed;
+      top: 18px;
+      right: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      z-index: 13;
+      pointer-events: none;
+      touch-action: none;
+      max-width: calc(100vw - 24px);
+      transform: translateY(0);
+      transition: transform 0.18s ease;
+    }
+
+    #inventoryUIGroup.open { transform: translateY(0); }
+
+    #inventoryTopRow {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: auto;
+    }
+
+    #inventoryBar {
+      display: flex;
+      flex-direction: row;
+      gap: 8px;
+      z-index: 13;
+      pointer-events: auto;
+      flex: 0 0 auto;
+    }
+
+    .inventorySlot {
+      width: 56px;
+      height: 56px;
+      padding: 4px;
+      border-radius: 4px;
+      border: 1px solid #8cc7ff;
+      background: rgba(26, 43, 60, 0.88);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      box-shadow: 0 0 0 1px rgba(8,20,32,0.5) inset;
+      box-sizing: border-box;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .inventorySlot.selected,
+    .inventoryPanelItem.selected {
+      border-color: #ffe26a;
+      box-shadow: 0 0 10px rgba(255,226,106,0.5), 0 0 0 1px rgba(255,226,106,0.6) inset;
+    }
+
+    .inventorySlot.selected::before,
+    .inventorySlot.selected::after,
+    .inventoryPanelItem.selected::before,
+    .inventoryPanelItem.selected::after {
+      content: '';
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-color: #ffe26a;
+      border-style: solid;
+      pointer-events: none;
+    }
+
+    .inventorySlot.selected::before,
+    .inventoryPanelItem.selected::before {
+      top: 2px;
+      left: 2px;
+      border-width: 2px 0 0 2px;
+    }
+
+    .inventorySlot.selected::after,
+    .inventoryPanelItem.selected::after {
+      right: 2px;
+      bottom: 2px;
+      border-width: 0 2px 2px 0;
+    }
+
+    .inventoryQty {
+      position: absolute;
+      right: 3px;
+      bottom: 2px;
+      font-size: 11px;
+      font-weight: bold;
+      line-height: 1;
+      color: #ffffff;
+      text-shadow: 1px 1px 0 #000;
+    }
+
+    #inventoryToggle {
+      width: 42px;
+      height: 42px;
+      border-radius: 4px;
+      border: 1px solid #8cc7ff;
+      background: rgba(26, 43, 60, 0.88);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 0 1px rgba(8,20,32,0.5) inset;
+      z-index: 14;
+      pointer-events: auto;
+      cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      flex: 0 0 auto;
+    }
+
+    #inventoryToggle:active { cursor: grabbing; }
+
+    .hamburger {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      width: 18px;
+    }
+
+    .hamburger span {
+      display: block;
+      height: 2px;
+      background: #d7efff;
+      border-radius: 1px;
+    }
+
+    #inventoryPanel {
+      width: min(320px, calc(100vw - 24px));
+      max-width: calc(100vw - 24px);
+      max-height: min(320px, calc(100vh - 180px));
+      border-radius: 4px;
+      background: rgba(26, 43, 60, 0.9);
+      border: 1px solid #8cc7ff;
+      box-shadow: 0 8px 18px rgba(0,0,0,0.25);
+      z-index: 12;
+      pointer-events: none;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: block;
+      box-sizing: border-box;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      transform-origin: top center;
+      transform: translateY(-12px) scaleY(0);
+      opacity: 0;
+      transition: transform 0.18s ease, opacity 0.18s ease;
+    }
+
+    #inventoryPanel::-webkit-scrollbar { width: 0; height: 0; }
+
+    #inventoryPanel.open {
+      transform: translateY(0) scaleY(1);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    #inventoryPanelContents {
+      padding: 8px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      width: 100%;
+      box-sizing: border-box;
+      align-content: start;
+    }
+
+    .inventoryPanelItem {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      min-height: 0;
+      border-radius: 4px;
+      border: 1px solid #8cc7ff;
+      background: rgba(26, 43, 60, 0.88);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      cursor: grab;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .inventoryPanelItem.dragging { opacity: 0.55; }
+
+    .inventorySlot.dragOver,
+    .inventoryPanelItem.dragOver {
+      border-color: #fff7a8;
+      box-shadow: 0 0 0 2px rgba(255,247,168,0.35), 0 4px 12px rgba(0,0,0,0.12);
+    }
+
+    #touchControls {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 11;
+    }
+
+    .touchBtn {
+      position: absolute;
+      pointer-events: auto;
+      user-select: none;
+      -webkit-user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.22);
+      border: 1px solid rgba(255,255,255,0.5);
+      color: white;
+      font-size: 26px;
+      font-weight: bold;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 6px 16px rgba(0,0,0,0.12);
+    }
+
+    .touchBtn:active {
+      transform: scale(0.97);
+      background: rgba(255,255,255,0.35);
+    }
+
+    #leftBtn, #rightBtn {
+      width: 68px;
+      height: 68px;
+      bottom: 24px;
+    }
+
+    #leftBtn { left: 16px; }
+    #rightBtn { left: 100px; }
+
+    #jumpBtn {
+      width: 82px;
+      height: 82px;
+      right: 104px;
+      bottom: 24px;
+      border-radius: 50%;
+    }
+
+    #punchBtn {
+      width: 82px;
+      height: 82px;
+      right: 16px;
+      bottom: 24px;
+      border-radius: 50%;
+      font-size: 30px;
+    }
+
+    #saveQuitBtn {
+      width: calc(100% - 16px);
+      margin: 4px 8px 8px;
+      padding: 10px 0;
+      border-radius: 6px;
+      border: 1px solid #ff6b6b;
+      background: rgba(180, 40, 40, 0.75);
+      color: #fff;
+      font-size: 13px;
+      font-weight: bold;
+      font-family: Arial, sans-serif;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      pointer-events: auto;
+      box-sizing: border-box;
+    }
+
+    #saveQuitBtn:active {
+      background: rgba(200, 50, 50, 0.9);
+      transform: scale(0.97);
+    }
+
+
+    /* ─── Multiplayer login + chat ───────────────────────────────────────── */
+    #loginScreen {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      background: linear-gradient(180deg, rgba(9, 26, 45, 0.96), rgba(4, 12, 22, 0.96));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      pointer-events: auto;
+    }
+
+    #loginCard {
+      width: min(360px, calc(100vw - 36px));
+      padding: 24px 22px;
+      border-radius: 14px;
+      border: 1px solid rgba(140, 199, 255, 0.55);
+      background: rgba(26, 43, 60, 0.92);
+      box-shadow: 0 18px 48px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.06);
+      text-align: center;
+    }
+
+    #loginCard h1 {
+      margin: 0 0 8px;
+      color: #7ed957;
+      letter-spacing: 0.4px;
+    }
+
+    #loginCard p {
+      margin: 0 0 18px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.72);
+      line-height: 1.35;
+    }
+
+    #usernameInput {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 13px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(140, 199, 255, 0.8);
+      background: rgba(7, 18, 30, 0.9);
+      color: #fff;
+      font: 16px Arial, sans-serif;
+      outline: none;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    #usernameInput:focus { border-color: #7ed957; box-shadow: 0 0 0 3px rgba(126,217,87,0.18); }
+
+    #startButton {
+      width: 100%;
+      padding: 13px 14px;
+      border: 0;
+      border-radius: 8px;
+      background: #7ed957;
+      color: #10200f;
+      font: bold 16px Arial, sans-serif;
+      cursor: pointer;
+    }
+
+    #startButton:active { transform: translateY(1px); }
+
+    #chatUI {
+      position: fixed;
+      left: 12px;
+      bottom: 112px;
+      z-index: 18;
+      width: min(340px, calc(100vw - 24px));
+      pointer-events: none;
+      font-family: Arial, sans-serif;
+    }
+
+    #chatLog {
+      max-height: 128px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 4px;
+      margin-bottom: 6px;
+      text-align: left;
+    }
+
+    .chatLine {
+      width: fit-content;
+      max-width: 100%;
+      box-sizing: border-box;
+      padding: 6px 8px;
+      border-radius: 9px;
+      background: rgba(10, 20, 32, 0.62);
+      color: white;
+      font-size: 12px;
+      line-height: 1.25;
+      text-shadow: 0 1px 1px rgba(0,0,0,0.5);
+      overflow-wrap: anywhere;
+    }
+
+    #chatForm {
+      display: flex;
+      gap: 6px;
+      pointer-events: auto;
+    }
+
+    #chatInput {
+      flex: 1;
+      min-width: 0;
+      padding: 10px 11px;
+      border-radius: 9px;
+      border: 1px solid rgba(255,255,255,0.45);
+      background: rgba(7, 18, 30, 0.74);
+      color: white;
+      outline: none;
+      font: 14px Arial, sans-serif;
+    }
+
+    #chatInput:focus { border-color: #7ed957; background: rgba(7, 18, 30, 0.92); }
+
+    #chatSendBtn {
+      padding: 0 12px;
+      border: 1px solid rgba(255,255,255,0.45);
+      border-radius: 9px;
+      background: rgba(126,217,87,0.88);
+      color: #10200f;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #networkStatus {
+      position: fixed;
+      left: 12px;
+      top: 12px;
+      z-index: 12;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: rgba(10, 20, 32, 0.52);
+      color: rgba(255,255,255,0.82);
+      font-size: 12px;
+      pointer-events: none;
+    }
+
+  </style>
 </head>
 <body>
-  <div id="game-container"></div>
 
-  <!--
-    ─── BOOT ORDER ───────────────────────────
-    1. Shared constants
-    2. Client modules (SoundManager, PlayerInventory, then scenes)
-    3. main.js – fetches config.json, creates Phaser.Game
-  -->
-  <script src="js/shared/PacketTypes.js"></script>
-  <script src="js/client/SoundManager.js"></script>
-  <script src="js/client/PlayerInventory.js"></script>
-  <script src="js/client/scenes/BootScene.js"></script>
-  <script src="js/client/scenes/LoadScene.js"></script>
-  <script src="js/client/scenes/GameScene.js"></script>
-  <script src="js/client/scenes/UIScene.js"></script>
-  <script src="js/main.js"></script>
+  <div id="loginScreen">
+    <div id="loginCard">
+      <h1>Remixtopia Multiplayer</h1>
+      <p>Enter a name, join the shared server, then mine, plant, jump, and chat with other players.</p>
+      <input type="text" id="usernameInput" placeholder="Your name..." maxlength="15" autocomplete="off" autofocus />
+      <button id="startButton" type="button">Join Game</button>
+    </div>
+  </div>
+  <canvas id="game" tabindex="0"></canvas>
+  <div id="hud">
+    <div id="hudInner">
+      <div class="panel">A/D or ←/→ move · Space hold jump<br>1-4 select quick slot · Mouse wheel zoom · Click 📦 to open inventory · Left click break/place · Walk into drops to collect</div>
+      <div class="panel" id="stats">Zoom: 1.00x</div>
+    </div>
+  </div>
+  <div id="inventoryUIGroup">
+    <div id="inventoryTopRow">
+      <div id="inventoryToggle">
+        <div class="hamburger">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+      <div id="inventoryBar"></div>
+    </div>
+    <div id="inventoryPanel">
+      <div id="inventoryPanelContents"></div>
+      <button id="saveQuitBtn">Save & Quit</button>
+    </div>
+  </div>
+  <div id="touchControls">
+    <div class="touchBtn" id="leftBtn">◀</div>
+    <div class="touchBtn" id="rightBtn">▶</div>
+    <div class="touchBtn" id="jumpBtn">▲</div>
+    <div class="touchBtn" id="punchBtn">✊</div>
+  </div>
+  <div id="networkStatus">Offline</div>
+  <div id="chatUI">
+    <div id="chatLog"></div>
+    <form id="chatForm" autocomplete="off">
+      <input id="chatInput" type="text" maxlength="80" placeholder="Press Enter to chat..." />
+      <button id="chatSendBtn" type="submit">Send</button>
+    </form>
+  </div>
+
+  <script>
+const TILE_SIZE = 32;
+
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+        r = Math.min(r || 0, Math.abs(w) / 2, Math.abs(h) / 2);
+        this.moveTo(x + r, y);
+        this.lineTo(x + w - r, y);
+        this.quadraticCurveTo(x + w, y, x + w, y + r);
+        this.lineTo(x + w, y + h - r);
+        this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        this.lineTo(x + r, y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - r);
+        this.lineTo(x, y + r);
+        this.quadraticCurveTo(x, y, x + r, y);
+        return this;
+      };
+    }
+
+    const PLAYER_SIZE_X = 24;
+    const PLAYER_SIZE_Y = 24;
+    const WORLD_WIDTH = 80;
+    const WORLD_HEIGHT = 64;
+    const GROUND_ROW = 20;
+    const MIN_ZOOM = 0.6;
+    const MAX_ZOOM = 2.5;
+    const ZOOM_STEP = 0.1;
+    const FIXED_DT = 1 / 60;
+
+    const WALK_SPEED     = 200;
+    const WALK_ACCEL     = 5000;
+    const GROUND_FRIC    = 659;
+    const AIR_FRIC       = 659;
+
+    const JUMP_VEL       = -640;
+    const GRAVITY_HOLD   = 1600;
+    const GRAVITY_NORMAL = 2400;
+    const MAX_FALL_SPEED = 800;
+    const GRAVITY_CANCEL = 12000;
+
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const stats = document.getElementById('stats');
+    const inventoryUIGroup = document.getElementById('inventoryUIGroup');
+    const inventoryBar = document.getElementById('inventoryBar');
+    const inventoryPanel = document.getElementById('inventoryPanel');
+    const inventoryPanelContents = document.getElementById('inventoryPanelContents');
+    const inventoryToggle = document.getElementById('inventoryToggle');
+    const leftBtn = document.getElementById('leftBtn');
+    const rightBtn = document.getElementById('rightBtn');
+    const jumpBtn = document.getElementById('jumpBtn');
+    const punchBtn = document.getElementById('punchBtn');
+    const saveQuitBtn = document.getElementById('saveQuitBtn');
+    const loginScreen = document.getElementById('loginScreen');
+    const usernameInput = document.getElementById('usernameInput');
+    const startButton = document.getElementById('startButton');
+    const chatUI = document.getElementById('chatUI');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const chatLog = document.getElementById('chatLog');
+    const networkStatus = document.getElementById('networkStatus');
+
+    let gameInfo = {
+      viewContext: 'feed',
+      contentSafeAreaInset: { top: 0, right: 0, bottom: 0, left: 0 }
+    };
+
+    // ─── Multiplayer sync ────────────────────────────────────────────────
+    // This is the same lightweight position-sync style used by index (7).html.
+    // Replace this base64 value if you deploy api/sync.js to a different Vercel URL.
+    const SERVER_URL = atob("aHR0cHM6Ly90ZXN0aW5nYWdhaW5sb2wtbWF1dmUudmVyY2VsLmFwcC9hcGkvc3luYw==");
+    const NETWORK_INTERVAL_MS = 70;
+    const CHAT_BUBBLE_MS = 8000;
+    const CHAT_LOG_MS = 15000;
+    const myId = 'p_' + Math.floor(Math.random() * 1e9).toString(36) + '_' + Date.now().toString(36);
+    let myName = '';
+    let gameJoined = false;
+    let networkWorker = null;
+    let allPlayers = {};
+    const remoteVisuals = {};
+    const seenRemoteChats = {};
+    let myChat = { text: '', t: 0 };
+
+    function clampText(value, maxLen) {
+      return String(value || '').replace(/[\r\n\t]+/g, ' ').replace(/%/g, '').trim().slice(0, maxLen);
+    }
+
+    function makeNetworkPayload() {
+      return JSON.stringify({ n: clampText(myName, 15), c: clampText(myChat.text, 80), ct: myChat.t || 0 });
+    }
+
+    function parseNetworkPayload(player, fallbackId) {
+      const rawName = player && player.name ? String(player.name) : fallbackId;
+      try {
+        const obj = JSON.parse(rawName);
+        return {
+          name: clampText(obj.n || fallbackId, 15) || fallbackId,
+          chat: clampText(obj.c || '', 80),
+          chatTime: Number(obj.ct || 0) || 0
+        };
+      } catch (_) {
+        return { name: clampText(rawName, 15) || fallbackId, chat: '', chatTime: 0 };
+      }
+    }
+
+    function initNetwork() {
+      if (networkWorker) return;
+      try {
+        const workerCode = `
+          let X = 0, Y = 0, NM = '', ID = '', URL = '', timer = null;
+          function tick(){
+            if (!URL || !ID) return;
+            fetch(URL + '?id=' + encodeURIComponent(ID) + '&name=' + encodeURIComponent(NM) + '&x=' + Math.round(X) + '&y=' + Math.round(Y) + '&_t=' + Date.now())
+              .then(r => r.json())
+              .then(d => self.postMessage({ success:true, data:d }))
+              .catch(() => self.postMessage({ success:false }));
+          }
+          self.onmessage = function(e){
+            const d = e.data || {};
+            if (d.id) ID = d.id;
+            if (d.url) URL = d.url;
+            if (typeof d.name === 'string') NM = d.name;
+            if (typeof d.x === 'number') X = d.x;
+            if (typeof d.y === 'number') Y = d.y;
+            if (d.init && !timer) { tick(); timer = setInterval(tick, ${NETWORK_INTERVAL_MS}); }
+          };
+        `;
+        const blob = new Blob([workerCode], { type: 'text/javascript' });
+        networkWorker = new Worker(URL.createObjectURL(blob));
+        networkWorker.onmessage = (e) => {
+          if (e.data && e.data.success && e.data.data) {
+            allPlayers = e.data.data;
+            networkStatus.textContent = `Online · ${Math.max(0, Object.keys(allPlayers).length - 1)} nearby`;
+            processRemoteChatMessages();
+          } else {
+            networkStatus.textContent = 'Connecting...';
+          }
+        };
+        sendNetworkPing(true);
+      } catch (err) {
+        networkStatus.textContent = 'Network unavailable';
+        console.warn('Multiplayer worker failed:', err);
+      }
+    }
+
+    function sendNetworkPing(init = false) {
+      if (!networkWorker || !gameJoined) return;
+      networkWorker.postMessage({
+        init,
+        url: SERVER_URL,
+        id: myId,
+        name: makeNetworkPayload(),
+        x: playerState.x,
+        y: playerState.y
+      });
+    }
+
+    function drawTextBubble(worldX, worldY, title, chat, isLocal) {
+      const invZoom = 1 / Math.max(0.001, cameraState.zoom);
+      ctx.save();
+      ctx.font = `${12 * invZoom}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const titleW = ctx.measureText(title).width + 12 * invZoom;
+      const titleH = 17 * invZoom;
+      ctx.fillStyle = isLocal ? 'rgba(18, 67, 60, 0.82)' : 'rgba(18, 24, 34, 0.78)';
+      ctx.strokeStyle = isLocal ? 'rgba(126,217,87,0.9)' : 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 1 * invZoom;
+      ctx.beginPath();
+      ctx.roundRect(worldX - titleW / 2, worldY - titleH, titleW, titleH, 5 * invZoom);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.fillText(title, worldX, worldY - titleH / 2);
+
+      if (chat) {
+        ctx.font = `${13 * invZoom}px Arial`;
+        const maxW = 190 * invZoom;
+        let text = chat;
+        while (ctx.measureText(text).width > maxW && text.length > 4) text = text.slice(0, -2);
+        if (text !== chat) text = text.slice(0, -1) + '…';
+        const bubbleW = Math.min(maxW, ctx.measureText(text).width + 18 * invZoom);
+        const bubbleH = 24 * invZoom;
+        const by = worldY - titleH - 7 * invZoom;
+        ctx.fillStyle = 'rgba(255,255,255,0.92)';
+        ctx.strokeStyle = 'rgba(0,0,0,0.18)';
+        ctx.beginPath();
+        ctx.roundRect(worldX - bubbleW / 2, by - bubbleH, bubbleW, bubbleH, 8 * invZoom);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#102030';
+        ctx.fillText(text, worldX, by - bubbleH / 2);
+      }
+      ctx.restore();
+    }
+
+    function drawRemotePlayers() {
+      const now = Date.now();
+      for (const id in allPlayers) {
+        if (id === myId) continue;
+        const p = allPlayers[id];
+        if (!p || typeof p.x !== 'number' || typeof p.y !== 'number') continue;
+        if (!remoteVisuals[id]) remoteVisuals[id] = { x: p.x, y: p.y };
+        remoteVisuals[id].x += (p.x - remoteVisuals[id].x) * 0.35;
+        remoteVisuals[id].y += (p.y - remoteVisuals[id].y) * 0.35;
+        const packet = parseNetworkPayload(p, id);
+        ctx.save();
+        ctx.fillStyle = '#ff8f3f';
+        ctx.fillRect(remoteVisuals[id].x, remoteVisuals[id].y, PLAYER_SIZE_X, PLAYER_SIZE_Y);
+        ctx.strokeStyle = '#bd5218';
+        ctx.strokeRect(remoteVisuals[id].x + 0.5, remoteVisuals[id].y + 0.5, PLAYER_SIZE_X - 1, PLAYER_SIZE_Y - 1);
+        ctx.restore();
+        const activeChat = packet.chat && now - packet.chatTime < CHAT_BUBBLE_MS ? packet.chat : '';
+        drawTextBubble(remoteVisuals[id].x + PLAYER_SIZE_X / 2, remoteVisuals[id].y - 7, packet.name, activeChat, false);
+      }
+
+      for (const id in remoteVisuals) {
+        if (!allPlayers[id]) delete remoteVisuals[id];
+      }
+    }
+
+    function addChatLine(name, text) {
+      const line = document.createElement('div');
+      line.className = 'chatLine';
+      const strong = document.createElement('strong');
+      strong.textContent = name + ': ';
+      const span = document.createElement('span');
+      span.textContent = text;
+      line.appendChild(strong);
+      line.appendChild(span);
+      chatLog.appendChild(line);
+      while (chatLog.children.length > 8) chatLog.removeChild(chatLog.firstChild);
+      setTimeout(() => { if (line.parentNode) line.parentNode.removeChild(line); }, CHAT_LOG_MS);
+    }
+
+    function processRemoteChatMessages() {
+      for (const id in allPlayers) {
+        if (id === myId) continue;
+        const packet = parseNetworkPayload(allPlayers[id], id);
+        if (!packet.chat || !packet.chatTime) continue;
+        if ((seenRemoteChats[id] || 0) >= packet.chatTime) continue;
+        seenRemoteChats[id] = packet.chatTime;
+        addChatLine(packet.name, packet.chat);
+      }
+    }
+
+    function sendChatMessage(text) {
+      const clean = clampText(text, 80);
+      if (!clean) return;
+      myChat = { text: clean, t: Date.now() };
+      addChatLine(myName || 'You', clean);
+      sendNetworkPing(false);
+    }
+
+    function isTypingChat() {
+      return document.activeElement === chatInput || document.activeElement === usernameInput;
+    }
+
+    let isMuted = false;
+    let gameEnded = false;
+    let scoreReported = false;
+    let canSaveGame = false;
+    let playerInfo = null;
+    let saveTimer = 0;
+    const SAVE_INTERVAL = 30;
+    let activeMinePointer = null;
+    let interactionTarget = null;
+    let mineCooldownRemaining = 0;
+    let handAnimation = null;
+    let punchHeld = false;
+    const particles = [];
+    const droppedItems = [];
+    const plantedSeeds = [];
+
+    // ─── Sound ──────────────────────────────────────────────────────────────
+    const SOUND_URLS = {
+      seedPlant:  'https://lqy3lriiybxcejon.public.blob.vercel-storage.com/ac9622f7-f356-4f99-86be-bba5a9c0d0bd/seed-plant-qLMRJFq4NC-pYv6PesC4KMz7lzR8JiMEO4LPsyMml.mp3?LQQA',
+      dirtHit:    'https://lqy3lriiybxcejon.public.blob.vercel-storage.com/ac9622f7-f356-4f99-86be-bba5a9c0d0bd/dirt-hit-5690kHauZf-HP1onfBIkHrko86XLDxJTaStvGqoBk.mp3?P70Y',
+      dirtBreak:  'https://lqy3lriiybxcejon.public.blob.vercel-storage.com/ac9622f7-f356-4f99-86be-bba5a9c0d0bd/dirt-break-qDrwpcnT2P-Eh3AU64RXbGIaRKkmkfGsY852chJCX.mp3?Sot2',
+      rockHit:    'https://lqy3lriiybxcejon.public.blob.vercel-storage.com/ac9622f7-f356-4f99-86be-bba5a9c0d0bd/rock-hit-UspaWtp6nP-4s3TA7A8I8hTB4YnRwV7TtJUYLVbRX.mp3?Zr6R',
+      rockBreak:  'https://lqy3lriiybxcejon.public.blob.vercel-storage.com/ac9622f7-f356-4f99-86be-bba5a9c0d0bd/rock-break-9UlvUJ3HCn-6SNLEjZBhgXuio54lOzkIPeygSel3F.mp3?QxCN'
+    };
+
+    const audioCache = new Map();
+
+    function playSound(soundKey) {
+      if (isMuted) return;
+      try {
+        let audio = audioCache.get(soundKey);
+        if (!audio) {
+          audio = new Audio(SOUND_URLS[soundKey]);
+          audio.preload = 'auto';
+          audio.volume = 0.7;
+          audioCache.set(soundKey, audio);
+        }
+        const sound = audio.cloneNode();
+        sound.volume = 0.7;
+        sound.play().catch(() => {});
+      } catch (e) {}
+    }
+
+    // ─── Block / Item definitions ────────────────────────────────────────────
+    const BLOCK_DEFS = {
+      1: { id:1, name:'Dirt',    durability:3, breakable:true,  placeable:true,  inventoryKey:'dirt_block', dropTable:[{itemKey:'seed',      chance:0.5,quantity:1},{itemKey:'dirt_block',chance:0.1,quantity:1}] },
+      2: { id:2, name:'Bedrock', durability:0, breakable:false, placeable:false, inventoryKey:null,          dropTable:[] },
+      3: { id:3, name:'Terrain Grass', durability:3, breakable:true, placeable:true, inventoryKey:'dirt_block', terrainLayer:true, dropTable:[{itemKey:'seed', chance:0.5,quantity:1},{itemKey:'dirt_block',chance:0.1,quantity:1}] },
+      4: { id:4, name:'Rock',    durability:7, breakable:true,  placeable:true,  inventoryKey:'rock_block', dropTable:[{itemKey:'rock_seed', chance:0.35,quantity:1},{itemKey:'rock_block',chance:0.15,quantity:1}] },
+      5: { id:5, name:'Lava',    durability:8, breakable:true,  placeable:true,  inventoryKey:'lava_block', dropTable:[{itemKey:'lava_seed', chance:0.25,quantity:1},{itemKey:'lava_block',chance:0.1,quantity:1}] }
+    };
+
+    const ITEM_DEFS = {
+      hand:        { key:'hand',        name:'Punch',       type:'tool',  placeableTile:null, usableForBreaking:true,  blockId:null },
+      seed:        { key:'seed',        name:'Seed',        type:'seed',  placeableTile:null, usableForBreaking:false, seedType:'dirt' },
+      rock_seed:   { key:'rock_seed',   name:'Rock Seed',   type:'seed',  placeableTile:null, usableForBreaking:false, seedType:'rock' },
+      lava_seed:   { key:'lava_seed',   name:'Lava Seed',   type:'seed',  placeableTile:null, usableForBreaking:false, seedType:'lava' },
+      grass_seed:  { key:'grass_seed',  name:'Grass Seed',  type:'seed',  placeableTile:null, usableForBreaking:false, seedType:'grass' },
+      dirt_block:  { key:'dirt_block',  name:'Dirt Block',  type:'block', placeableTile:1,    usableForBreaking:false, blockId:1 },
+      rock_block:  { key:'rock_block',  name:'Rock Block',  type:'block', placeableTile:4,    usableForBreaking:false, blockId:4 },
+      lava_block:  { key:'lava_block',  name:'Lava Block',  type:'block', placeableTile:5,    usableForBreaking:false, blockId:5 },
+      grass_block: { key:'grass_block', name:'Grass Block', type:'block', placeableTile:3,    usableForBreaking:false, blockId:3 },
+      blue_block:  { key:'blue_block',  name:'Blue Block',  type:'block', placeableTile:6,    usableForBreaking:false, blockId:6 }
+    };
+
+    const SEED_DEFS = {
+      dirt: { type:'dirt', itemKey:'seed',      displayName:'Dirt Seed',  growthTime:10, immatureHits:6,  stemColor:'#4f8f2b', bloomColor:'#7ed957', blockRewardKey:'dirt_block',
+        seedReturnTable:[{quantity:1,chance:0.7},{quantity:2,chance:0.3},{quantity:3,chance:0.1}],
+        blockYieldTable:[{quantity:1,chance:1.0},{quantity:2,chance:0.9},{quantity:3,chance:0.7},{quantity:4,chance:0.5},{quantity:5,chance:0.3},{quantity:6,chance:0.1}] },
+      rock: { type:'rock', itemKey:'rock_seed', displayName:'Rock Seed',  growthTime:30, immatureHits:10, stemColor:'#6d7680', bloomColor:'#aeb7c2', blockRewardKey:'rock_block',
+        seedReturnTable:[{quantity:1,chance:0.6},{quantity:2,chance:0.2},{quantity:3,chance:0.05}],
+        blockYieldTable:[{quantity:1,chance:1.0},{quantity:2,chance:0.65},{quantity:3,chance:0.35},{quantity:4,chance:0.15}] },
+      lava: { type:'lava', itemKey:'lava_seed', displayName:'Lava Seed',  growthTime:45, immatureHits:12, stemColor:'#ff6b2c', bloomColor:'#ffb347', blockRewardKey:'lava_block',
+        seedReturnTable:[{quantity:1,chance:0.5},{quantity:2,chance:0.15}],
+        blockYieldTable:[{quantity:1,chance:1.0},{quantity:2,chance:0.4}] },
+      grass: { type:'grass', itemKey:'grass_seed', displayName:'Grass Seed', growthTime:20, immatureHits:2, stemColor:'#3f9f52', bloomColor:'#7dde6a', blockRewardKey:'blue_block',
+        notes:'Seed-grown grass plant. Distinct from terrain grass block (tile 3). Non-collidable crop entity. Drops blue_block.',
+        seedReturnTable:[{quantity:1,chance:0.9},{quantity:2,chance:0.3},{quantity:3,chance:0.05}],
+        blockYieldTable:[{quantity:1,chance:1.0},{quantity:2,chance:0.75},{quantity:3,chance:0.5},{quantity:4,chance:0.35},{quantity:5,chance:0.15}] }
+    };
+
+    const SEED_COMBINATION_RECIPES = [
+      { ingredients:['dirt', 'rock'], result:'grass' }
+    ];
+
+    const blockDamage = new Map();
+    const HIT_COOLDOWN = 0.2;
+    const DAMAGE_RESET_DELAY = 10;
+
+    const input = {
+      left: false, right: false, jump: false, jumpJustPressed: false,
+      pointerTileX: 0, pointerTileY: 0
+    };
+
+    const worldState = { width: WORLD_WIDTH, height: WORLD_HEIGHT, tiles: [], version: 0 };
+
+    const QUICK_SLOT_COUNT = 4;
+    const INVENTORY_PANEL_SLOTS = 12;
+    const INVENTORY_PANEL_MAX_WIDTH = 320;
+    const inventoryState = {
+      quickSlots: ['hand', null, null, null],
+      selectedIndex: 0,
+      items: new Map([['hand', { key:'hand', quantity:1 }]]),
+      panelOpen: false,
+      panelSlots: new Array(INVENTORY_PANEL_SLOTS).fill(null),
+      dragItemKey: null,
+      dragSourceSlot: null,
+      dragSourceType: null,
+      safeRightInset: 0,
+      isDraggingHand: false,
+      dragUiPointerId: null,
+      dragUiStartY: 0,
+      dragUiStartOpenAmount: 0,
+      panelOpenAmount: 0,
+      movedUiDuringDrag: false
+    };
+
+    const playerState = {
+      x: 6 * TILE_SIZE, y: (GROUND_ROW - 3) * TILE_SIZE,
+      width: PLAYER_SIZE_X, height: PLAYER_SIZE_Y,
+      vx: 0, vy: 0, onGround: false, facing: 1, color: '#3f7cff'
+    };
+
+    const cameraState = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
+
+    // ─── Coordinate helpers ──────────────────────────────────────────────────
+
+    // Converts raw client (page/iframe) coords → canvas-local CSS pixel coords.
+    // Always use this on raw e.clientX/Y before anything else.
+    function clientToLocal(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+      };
+    }
+
+    // Converts canvas-local coords → world coords.
+    // activeMinePointer and all internal callers use local coords after clientToLocal.
+    function localToWorld(localX, localY) {
+      const vw = canvas.width / devicePixelRatio;
+      const vh = canvas.height / devicePixelRatio;
+      return {
+        x: (localX - vw / 2) / cameraState.zoom + cameraState.x,
+        y: (localY - vh / 2) / cameraState.zoom + cameraState.y
+      };
+    }
+
+    // Convenience: client → world in one step (used only in direct event handlers
+    // that haven't pre-converted yet — kept for screenToWorld call sites below).
+    function screenToWorld(clientX, clientY) {
+      const local = clientToLocal(clientX, clientY);
+      return localToWorld(local.x, local.y);
+    }
+
+    // ─── World generation ────────────────────────────────────────────────────
+    function createWorld() {
+      // Deterministic baseline map so every multiplayer client starts with the same terrain.
+      let seed = 133742069;
+      const rand = () => {
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        return seed / 4294967296;
+      };
+      worldState.tiles = Array.from({ length: worldState.height }, (_, y) => {
+        const row = new Array(worldState.width).fill(0);
+        const depthFromBedrock = (worldState.height - 1) - y;
+        if (y === worldState.height - 1) {
+          row.fill(2);
+        } else if (y === GROUND_ROW) {
+          row.fill(3);
+        } else if (y > GROUND_ROW && y < worldState.height - 1) {
+          for (let x = 0; x < worldState.width; x++) {
+            let tile = rand() < (1/12) ? 4 : 1;
+            if (depthFromBedrock === 4 && rand() < 0.15) tile = 5;
+            else if (depthFromBedrock === 3 && rand() < 0.25) tile = 5;
+            else if (depthFromBedrock === 2 && rand() < 0.35) tile = 5;
+            else if (depthFromBedrock === 1 && rand() < 0.5) tile = 5;
+            row[x] = tile;
+          }
+        }
+        return row;
+      });
+      worldState.version++;
+    }
+
+    function resetGame() {
+      createWorld();
+      blockDamage.clear();
+      inventoryState.quickSlots = ['hand', null, null, null];
+      inventoryState.selectedIndex = 0;
+      inventoryState.items = new Map([['hand', { key:'hand', quantity:1 }]]);
+      inventoryState.panelSlots = new Array(INVENTORY_PANEL_SLOTS).fill(null);
+      inventoryState.panelOpen = false;
+      inventoryState.panelOpenAmount = 0;
+      inventoryToggle.classList.remove('dragging');
+      applyInventoryLayout(true);
+      activeMinePointer = null;
+      interactionTarget = null;
+      mineCooldownRemaining = 0;
+      handAnimation = null;
+      playerState.x = 6 * TILE_SIZE;
+      playerState.y = Math.max(2 * TILE_SIZE, (GROUND_ROW - 5) * TILE_SIZE);
+      playerState.vx = 0; playerState.vy = 0;
+      playerState.onGround = false; playerState.facing = 1;
+      cameraState.x = playerState.x; cameraState.y = playerState.y;
+      cameraState.zoom = 1; cameraState.targetZoom = 1;
+      droppedItems.length = 0;
+      plantedSeeds.length = 0;
+      gameEnded = false; scoreReported = false;
+    }
+
+    // ─── Utility ─────────────────────────────────────────────────────────────
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+    function getTile(tx, ty) {
+      if (tx < 0 || ty < 0 || tx >= worldState.width || ty >= worldState.height) return 1;
+      return worldState.tiles[ty][tx];
+    }
+
+    function setTile(tx, ty, value) {
+      if (tx < 0 || ty < 0 || tx >= worldState.width || ty >= worldState.height) return;
+      const previous = worldState.tiles[ty][tx];
+      worldState.tiles[ty][tx] = value;
+      if (value === 0) {
+        blockDamage.delete(`${tx},${ty}`);
+        const seedAbove = getSeedAt(tx, ty - 1);
+        if (seedAbove) resolveSeedSupportBreak(seedAbove);
+      } else if (previous === 0 && value !== 0) {
+        const seedAbove = getSeedAt(tx, ty - 1);
+        if (seedAbove) seedAbove.hits = 0;
+      }
+      worldState.version++;
+    }
+
+    function getBlockDef(tile) { return BLOCK_DEFS[tile] || null; }
+    function getBlockDurability(tile) { const d = getBlockDef(tile); return d ? d.durability || 0 : 0; }
+    function getSelectedItemKey() { return inventoryState.quickSlots[inventoryState.selectedIndex] || 'hand'; }
+    function getSelectedItemDef() { return ITEM_DEFS[getSelectedItemKey()] || ITEM_DEFS.hand; }
+    function getItemQuantity(itemKey) { return inventoryState.items.get(itemKey)?.quantity || 0; }
+
+    // ─── Range check ─────────────────────────────────────────────────────────
+    function isWithinPunchRange(tx, ty) {
+      const playerCenterX = playerState.x + playerState.width / 2;
+      const playerCenterY = playerState.y + playerState.height / 2;
+      const targetCenterX = tx * TILE_SIZE + TILE_SIZE / 2;
+      const targetCenterY = ty * TILE_SIZE + TILE_SIZE / 2;
+      const dx = targetCenterX - playerCenterX;
+      const dy = targetCenterY - playerCenterY;
+      return Math.hypot(dx, dy) <= TILE_SIZE * 4;
+    }
+
+    // ─── Inventory management ────────────────────────────────────────────────
+    function ensureItemSlot(itemKey) {
+      if (itemKey === 'hand') return;
+      if (inventoryState.quickSlots.includes(itemKey)) return;
+      if (inventoryState.panelSlots.includes(itemKey)) return;
+      const emptyQuick = inventoryState.quickSlots.findIndex((s, i) => i !== 0 && s === null);
+      if (emptyQuick !== -1) { inventoryState.quickSlots[emptyQuick] = itemKey; return; }
+      const emptyPanel = inventoryState.panelSlots.findIndex(s => s === null);
+      if (emptyPanel !== -1) inventoryState.panelSlots[emptyPanel] = itemKey;
+    }
+
+    function compactInventorySlots() {
+      inventoryState.quickSlots[0] = 'hand';
+      for (let i = 1; i < inventoryState.quickSlots.length; i++) {
+        const k = inventoryState.quickSlots[i];
+        if (k && getItemQuantity(k) <= 0) inventoryState.quickSlots[i] = null;
+      }
+      for (let i = 0; i < INVENTORY_PANEL_SLOTS; i++) {
+        const k = inventoryState.panelSlots[i];
+        if (k && getItemQuantity(k) <= 0) inventoryState.panelSlots[i] = null;
+      }
+    }
+
+    function addInventoryItem(itemKey, quantity = 1) {
+      if (!ITEM_DEFS[itemKey] || quantity <= 0) return;
+      const cur = inventoryState.items.get(itemKey);
+      if (cur) cur.quantity += quantity;
+      else inventoryState.items.set(itemKey, { key: itemKey, quantity });
+      ensureItemSlot(itemKey);
+      renderInventory();
+    }
+
+    function consumeInventoryItem(itemKey, quantity = 1) {
+      if (itemKey === 'hand') return false;
+      const cur = inventoryState.items.get(itemKey);
+      if (!cur || cur.quantity < quantity) return false;
+      cur.quantity -= quantity;
+      if (cur.quantity <= 0) inventoryState.items.delete(itemKey);
+      compactInventorySlots();
+      if (!inventoryState.quickSlots[inventoryState.selectedIndex]) inventoryState.selectedIndex = 0;
+      renderInventory();
+      return true;
+    }
+
+    function setSelectedSlot(index) {
+      if (index < 0 || index >= inventoryState.quickSlots.length) return;
+      if (inventoryState.quickSlots[index] === null) return;
+      inventoryState.selectedIndex = index;
+      renderInventory();
+    }
+
+    function createItemIcon(itemKey) {
+      const def = itemKey ? ITEM_DEFS[itemKey] : null;
+      const d = document.createElement('div');
+      d.style.cssText = 'width:24px;height:24px;position:relative;flex:0 0 auto;';
+      if (itemKey === 'hand') {
+        d.textContent = '✊';
+        d.style.cssText += 'display:flex;align-items:center;justify-content:center;font-size:18px;';
+      } else if (def && def.type === 'block') {
+        const colors = { 1:'#9b6b3d', 3:'#46b95b', 4:'#8b949e', 5:'#ff6b2c' };
+        const borders = { 1:'#7a522d', 3:'#2f8c42', 4:'#69727c', 5:'#c74312' };
+        d.style.background = colors[def.blockId] || '#9b6b3d';
+        d.style.border = `1px solid ${borders[def.blockId] || '#7a522d'}`;
+      } else if (def && def.type === 'seed') {
+        const colors = { rock:'#9aa3ad', lava:'#ff6b2c', dirt:'#7ac943', grass:'#55c963' };
+        d.style.background = colors[def.seedType] || '#7ac943';
+        d.style.borderRadius = '50%';
+        d.style.border = '1px solid rgba(0,0,0,0.25)';
+      }
+      return d;
+    }
+
+    function getInventoryPanelItems() {
+      return Array.from(inventoryState.items.values()).filter(i => i.key !== 'hand' && i.quantity > 0);
+    }
+
+    function renderInventory() {
+      inventoryState.quickSlots[0] = 'hand';
+      inventoryBar.innerHTML = '';
+      inventoryState.quickSlots.forEach((itemKey, index) => {
+        const slot = document.createElement('button');
+        slot.className = 'inventorySlot' + (index === inventoryState.selectedIndex ? ' selected' : '');
+        slot.type = 'button';
+        slot.dataset.slotIndex = String(index);
+        slot.title = itemKey ? (ITEM_DEFS[itemKey]?.name || itemKey) : 'Empty';
+        if (itemKey) slot.appendChild(createItemIcon(itemKey));
+        if (itemKey && itemKey !== 'hand') {
+          const qty = document.createElement('div');
+          qty.className = 'inventoryQty';
+          qty.textContent = String(getItemQuantity(itemKey));
+          slot.appendChild(qty);
+        }
+        slot.addEventListener('click', () => setSelectedSlot(index));
+        if (itemKey && index !== 0) {
+          slot.draggable = true;
+          slot.addEventListener('dragstart', (e) => { inventoryState.dragItemKey = itemKey; inventoryState.dragSourceSlot = index; inventoryState.dragSourceType = 'quick'; slot.classList.add('dragging'); e.dataTransfer.setData('text/plain', itemKey); });
+          slot.addEventListener('dragend', () => { inventoryState.dragItemKey = null; inventoryState.dragSourceSlot = null; inventoryState.dragSourceType = null; slot.classList.remove('dragging'); });
+        }
+        slot.addEventListener('dragover', (e) => { if (index === 0) return; e.preventDefault(); slot.classList.add('dragOver'); });
+        slot.addEventListener('dragleave', () => slot.classList.remove('dragOver'));
+        slot.addEventListener('drop', (e) => { if (index === 0) return; e.preventDefault(); slot.classList.remove('dragOver'); handleQuickSlotDrop(index); });
+        inventoryBar.appendChild(slot);
+      });
+
+      inventoryPanelContents.innerHTML = '';
+      const panelItems = getInventoryPanelItems();
+      for (let i = 0; i < INVENTORY_PANEL_SLOTS; i++) {
+        const itemKey = panelItems[i]?.key || null;
+        const entry = document.createElement('div');
+        entry.className = 'inventoryPanelItem' + (itemKey && inventoryState.quickSlots[inventoryState.selectedIndex] === itemKey ? ' selected' : '');
+        if (itemKey) {
+          entry.draggable = true;
+          entry.appendChild(createItemIcon(itemKey));
+          const qty = document.createElement('div'); qty.className = 'inventoryQty'; qty.textContent = String(getItemQuantity(itemKey)); entry.appendChild(qty);
+          entry.addEventListener('dragstart', (e) => { inventoryState.dragItemKey = itemKey; inventoryState.dragSourceSlot = i; inventoryState.dragSourceType = 'panel'; entry.classList.add('dragging'); e.dataTransfer.setData('text/plain', itemKey); });
+          entry.addEventListener('dragend', () => { inventoryState.dragItemKey = null; inventoryState.dragSourceSlot = null; inventoryState.dragSourceType = null; entry.classList.remove('dragging'); });
+          entry.addEventListener('dblclick', () => equipItemToSelectedQuickSlot(itemKey, i));
+        } else {
+          entry.innerHTML = '<div style="opacity:0.25;font-size:18px;line-height:1;">□</div>';
+        }
+        entry.addEventListener('dragover', (e) => { e.preventDefault(); entry.classList.add('dragOver'); });
+        entry.addEventListener('dragleave', () => entry.classList.remove('dragOver'));
+        entry.addEventListener('drop', (e) => { e.preventDefault(); entry.classList.remove('dragOver'); handlePanelSlotDrop(i); });
+        inventoryPanelContents.appendChild(entry);
+      }
+    }
+
+    function handleQuickSlotDrop(targetIndex) {
+      const itemKey = inventoryState.dragItemKey;
+      if (!itemKey || targetIndex === 0 || itemKey === 'hand') return;
+      const targetItem = inventoryState.quickSlots[targetIndex];
+      const sourceSlot = inventoryState.dragSourceSlot;
+      const sourceType = inventoryState.dragSourceType;
+      if (sourceType === 'quick' && sourceSlot !== null) {
+        if (sourceSlot === 0) return;
+        inventoryState.quickSlots[targetIndex] = itemKey;
+        inventoryState.quickSlots[sourceSlot] = targetItem;
+      } else if (sourceType === 'panel' && sourceSlot !== null) {
+        inventoryState.quickSlots[targetIndex] = itemKey;
+        inventoryState.panelSlots[sourceSlot] = targetItem === 'hand' ? null : targetItem;
+      }
+      inventoryState.quickSlots[0] = 'hand';
+      if (!inventoryState.quickSlots[inventoryState.selectedIndex]) inventoryState.selectedIndex = 0;
+      renderInventory();
+    }
+
+    function equipItemToSelectedQuickSlot(itemKey, panelIndex) {
+      if (!itemKey || itemKey === 'hand') return;
+      let targetIndex = inventoryState.selectedIndex === 0 ? 1 : inventoryState.selectedIndex;
+      if (targetIndex <= 0 || targetIndex >= QUICK_SLOT_COUNT) return;
+      const prev = inventoryState.quickSlots[targetIndex];
+      inventoryState.quickSlots[targetIndex] = itemKey;
+      if (typeof panelIndex === 'number' && panelIndex >= 0 && panelIndex < INVENTORY_PANEL_SLOTS)
+        inventoryState.panelSlots[panelIndex] = prev && prev !== 'hand' ? prev : null;
+      inventoryState.quickSlots[0] = 'hand';
+      renderInventory();
+    }
+
+    function handlePanelSlotDrop(targetIndex) {
+      const panelItems = getInventoryPanelItems();
+      const itemKey = inventoryState.dragItemKey;
+      if (!itemKey || itemKey === 'hand') return;
+      const sourceSlot = inventoryState.dragSourceSlot;
+      const sourceType = inventoryState.dragSourceType;
+      if (sourceType === 'quick' && sourceSlot !== null) {
+        if (sourceSlot === 0) return;
+        inventoryState.quickSlots[sourceSlot] = panelItems[targetIndex]?.key || null;
+      }
+      inventoryState.quickSlots[0] = 'hand';
+      renderInventory();
+    }
+
+    // ─── Drops ───────────────────────────────────────────────────────────────
+    function spawnDroppedItem(itemKey, x, y, quantity = 1) {
+      if (!ITEM_DEFS[itemKey] || quantity <= 0) return;
+      droppedItems.push({
+        itemKey, quantity, x, y,
+        vx: (Math.random() - 0.5) * 50,
+        vy: -70 - Math.random() * 35,
+        bob: Math.random() * Math.PI * 2,
+        grounded: false, physicsPaused: false, airTime: 0
+      });
+      if (droppedItems.length > 80) droppedItems.splice(0, droppedItems.length - 80);
+    }
+
+    function applyBlockDrops(tile, tx, ty) {
+      const def = getBlockDef(tile);
+      if (!def || !def.dropTable) return;
+      const spawnX = tx * TILE_SIZE + TILE_SIZE / 2;
+      const spawnY = ty * TILE_SIZE + TILE_SIZE / 2;
+      for (const drop of def.dropTable) {
+        if (Math.random() <= drop.chance) spawnDroppedItem(drop.itemKey, spawnX, spawnY, drop.quantity || 1);
+      }
+    }
+
+    // ─── Seeds ───────────────────────────────────────────────────────────────
+    function getSeedAt(tx, ty) { return plantedSeeds.find(s => s.tx === tx && s.ty === ty) || null; }
+    function removeSeed(seed) { const i = plantedSeeds.indexOf(seed); if (i !== -1) plantedSeeds.splice(i, 1); }
+
+    function getSeedCombinationKey(seedTypeA, seedTypeB) {
+      return [seedTypeA, seedTypeB].sort().join('+');
+    }
+
+    const SEED_COMBINATION_MAP = SEED_COMBINATION_RECIPES.reduce((map, recipe) => {
+      if (!recipe || !Array.isArray(recipe.ingredients) || recipe.ingredients.length !== 2 || !recipe.result) return map;
+      map.set(getSeedCombinationKey(recipe.ingredients[0], recipe.ingredients[1]), recipe.result);
+      return map;
+    }, new Map());
+
+    function getSeedCombinationResult(seedTypeA, seedTypeB) {
+      if (!seedTypeA || !seedTypeB) return null;
+      return SEED_COMBINATION_MAP.get(getSeedCombinationKey(seedTypeA, seedTypeB)) || null;
+    }
+
+    function createSeedInstance(seedType, tx, ty) {
+      const def = SEED_DEFS[seedType];
+      if (!def) return null;
+      return { seedType, tx, ty, growth: 0, hits: 0, growthTime: def.growthTime };
+    }
+
+    function spawnSeed(seedType, tx, ty) {
+      if (getSeedAt(tx, ty)) return false;
+      const seed = createSeedInstance(seedType, tx, ty);
+      if (!seed) return false;
+      plantedSeeds.push(seed);
+      return true;
+    }
+
+    function resolveSeedInteraction(tx, ty, incomingSeedType) {
+      if (!incomingSeedType) return { handled:false, combined:false, planted:false };
+
+      const existingSeed = getSeedAt(tx, ty);
+      if (existingSeed) {
+        const resultSeedType = getSeedCombinationResult(incomingSeedType, existingSeed.seedType);
+        console.log('[SeedCombo] interaction at existing seed', {
+          position: { x: tx, y: ty },
+          incomingSeed: incomingSeedType,
+          existingSeed: existingSeed.seedType,
+          result: resultSeedType || null
+        });
+
+        if (!resultSeedType) return { handled:false, combined:false, planted:false };
+
+        removeSeed(existingSeed);
+        clearBlockDamageState(tx, ty);
+
+        const combinedSeed = createSeedInstance(resultSeedType, tx, ty);
+        if (!combinedSeed) return { handled:true, combined:false, planted:false };
+        plantedSeeds.push(combinedSeed);
+
+        const spawnX = tx * TILE_SIZE + TILE_SIZE / 2;
+        const spawnY = ty * TILE_SIZE + TILE_SIZE / 2;
+        const resultDef = SEED_DEFS[resultSeedType];
+        console.log('[SeedCombo] combined seeds', {
+          position: { x: tx, y: ty },
+          incomingSeed: incomingSeedType,
+          existingSeed: existingSeed.seedType,
+          resultSeed: resultSeedType
+        });
+        spawnParticles(spawnX, spawnY, resultDef?.bloomColor || '#7dde6a', 16, 30, 90, 0.18, 0.35, 2, 5);
+        triggerHaptic();
+        worldState.version++;
+        return { handled:true, combined:true, planted:false, resultSeedType };
+      }
+
+      if (ty + 1 >= worldState.height) return { handled:false, combined:false, planted:false };
+      const lowerSeed = getSeedAt(tx, ty + 1);
+      if (!lowerSeed) return { handled:false, combined:false, planted:false };
+
+      const resultSeedType = getSeedCombinationResult(incomingSeedType, lowerSeed.seedType);
+      console.log('[SeedCombo] interaction above lower seed', {
+        position: { x: tx, y: ty },
+        incomingSeed: incomingSeedType,
+        lowerSeed: lowerSeed.seedType,
+        result: resultSeedType || null
+      });
+
+      if (!resultSeedType) return { handled:false, combined:false, planted:false };
+
+      removeSeed(lowerSeed);
+      clearBlockDamageState(tx, ty);
+      clearBlockDamageState(tx, ty + 1);
+
+      const combinedSeed = createSeedInstance(resultSeedType, tx, ty + 1);
+      if (!combinedSeed) return { handled:true, combined:false, planted:false };
+      plantedSeeds.push(combinedSeed);
+
+      const spawnX = tx * TILE_SIZE + TILE_SIZE / 2;
+      const spawnY = (ty + 0.5) * TILE_SIZE;
+      const resultDef = SEED_DEFS[resultSeedType];
+      console.log('[SeedCombo] combined stacked seeds', {
+        targetPosition: { x: tx, y: ty },
+        resultPosition: { x: tx, y: ty + 1 },
+        incomingSeed: incomingSeedType,
+        lowerSeed: lowerSeed.seedType,
+        resultSeed: resultSeedType
+      });
+      spawnParticles(spawnX, spawnY, resultDef?.bloomColor || '#7dde6a', 16, 30, 90, 0.18, 0.35, 2, 5);
+      triggerHaptic();
+      worldState.version++;
+      return { handled:true, combined:true, planted:false, resultSeedType };
+    }
+
+    function isSeedMature(seed) {
+      const def = SEED_DEFS[seed.seedType];
+      return !!def && seed.growth >= def.growthTime;
+    }
+
+    function rollIndependentDrops(table, itemKey, x, y) {
+      for (const entry of table) {
+        if (Math.random() <= entry.chance) spawnDroppedItem(itemKey, x, y, entry.quantity);
+      }
+    }
+
+    function harvestSeed(seed) {
+      const def = SEED_DEFS[seed.seedType];
+      if (!def) return false;
+      const spawnX = seed.tx * TILE_SIZE + TILE_SIZE / 2;
+      const spawnY = seed.ty * TILE_SIZE + TILE_SIZE / 2;
+      const isMature = isSeedMature(seed);
+      if (!isMature) return false;
+      console.log('[SeedHarvest]', {
+        seedType: seed.seedType,
+        position: { x: seed.tx, y: seed.ty },
+        seedReturnTable: def.seedReturnTable || [],
+        blockYieldTable: def.blockYieldTable || []
+      });
+      rollIndependentDrops(def.seedReturnTable, def.itemKey, spawnX, spawnY);
+      rollIndependentDrops(def.blockYieldTable, def.blockRewardKey, spawnX, spawnY);
+      removeSeed(seed);
+      clearBlockDamageState(seed.tx, seed.ty);
+      spawnParticles(spawnX, spawnY, def.bloomColor, 18, 35, 110, 0.2, 0.45, 3, 6);
+      triggerHaptic();
+      return true;
+    }
+
+    function destroySeed(seed, shouldDropSeed) {
+      const def = SEED_DEFS[seed.seedType];
+      if (!def) return false;
+      const spawnX = seed.tx * TILE_SIZE + TILE_SIZE / 2;
+      const spawnY = seed.ty * TILE_SIZE + TILE_SIZE / 2;
+      if (shouldDropSeed && Math.random() <= 0.5) spawnDroppedItem(def.itemKey, spawnX, spawnY, 1);
+      removeSeed(seed);
+      clearBlockDamageState(seed.tx, seed.ty);
+      spawnParticles(spawnX, spawnY, def.bloomColor, 10, 30, 90, 0.16, 0.32, 2, 5);
+      return true;
+    }
+
+    function resolveSeedSupportBreak(seed) {
+      if (!seed) return false;
+      return isSeedMature(seed) ? harvestSeed(seed) : destroySeed(seed, true);
+    }
+
+    function damageSeed(seed) {
+      const def = SEED_DEFS[seed.seedType];
+      if (!def) return false;
+      if (mineCooldownRemaining > 0) return false;
+
+      const spawnX = seed.tx * TILE_SIZE + TILE_SIZE / 2;
+      const spawnY = seed.ty * TILE_SIZE + TILE_SIZE / 2;
+      startHandStrike(seed.tx, seed.ty);
+      mineCooldownRemaining = HIT_COOLDOWN;
+
+      if (isSeedMature(seed)) { harvestSeed(seed); return true; }
+
+      const damageState = getOrCreateBlockDamageState(seed.tx, seed.ty);
+      seed.hits += 1;
+      if (damageState) {
+        damageState.tile = `seed_${seed.seedType}`;
+        damageState.totalDurability = def.immatureHits;
+        damageState.currentDamage = Math.min(def.immatureHits, seed.hits);
+        damageState.damagePercent = damageState.currentDamage / damageState.totalDurability;
+        damageState.resetAt = null;
+      }
+      spawnParticles(spawnX, spawnY, def.stemColor, 5, 20, 65, 0.12, 0.22, 2, 4);
+      if (seed.hits >= def.immatureHits) destroySeed(seed, true);
+      else worldState.version++;
+      triggerHaptic();
+      return true;
+    }
+
+    // ─── Block damage state ──────────────────────────────────────────────────
+    function getBlockKey(tx, ty) { return `${tx},${ty}`; }
+
+    function getOrCreateBlockDamageState(tx, ty) {
+      const seed = getSeedAt(tx, ty);
+      if (seed && !isSeedMature(seed)) {
+        const def = SEED_DEFS[seed.seedType];
+        if (!def) return null;
+        const key = getBlockKey(tx, ty);
+        let state = blockDamage.get(key);
+        if (!state || state.tile !== `seed_${seed.seedType}`) {
+          state = { tile:`seed_${seed.seedType}`, totalDurability:def.immatureHits, currentDamage:seed.hits, damagePercent:def.immatureHits > 0 ? seed.hits/def.immatureHits : 0, resetAt:null };
+          blockDamage.set(key, state);
+        }
+        return state;
+      }
+      const tile = getTile(tx, ty);
+      const durability = getBlockDurability(tile);
+      if (!durability || tile === 2) return null;
+      const key = getBlockKey(tx, ty);
+      let state = blockDamage.get(key);
+      if (!state || state.tile !== tile || state.totalDurability !== durability) {
+        state = { tile, totalDurability:durability, currentDamage:0, damagePercent:0, resetAt:null };
+        blockDamage.set(key, state);
+      }
+      return state;
+    }
+
+    function clearBlockDamageState(tx, ty) { blockDamage.delete(getBlockKey(tx, ty)); }
+
+    // ─── Interaction ─────────────────────────────────────────────────────────
+
+    // All interaction functions now receive canvas-LOCAL coords (already converted
+    // from client coords via clientToLocal in the event handlers).
+
+    function beginInteraction(localX, localY) {
+      const worldPos = localToWorld(localX, localY);
+      const tx = Math.floor(worldPos.x / TILE_SIZE);
+      const ty = Math.floor(worldPos.y / TILE_SIZE);
+      if (isWithinPunchRange(tx, ty)) {
+        activeMinePointer = { x: localX, y: localY };
+      } else {
+        activeMinePointer = null;
+      }
+    }
+
+    function endInteraction() {
+      activeMinePointer = null;
+      interactionTarget = null;
+      handAnimation = null;
+    }
+
+    function updateInteractionTarget(localX, localY) {
+      const worldPos = localToWorld(localX, localY);
+      const tx = Math.floor(worldPos.x / TILE_SIZE);
+      const ty = Math.floor(worldPos.y / TILE_SIZE);
+
+      if (!isWithinPunchRange(tx, ty)) {
+        interactionTarget = null;
+        return null;
+      }
+
+      const seed = getSeedAt(tx, ty);
+      if (seed) {
+        interactionTarget = { tx, ty, kind: 'seed' };
+        return interactionTarget;
+      }
+
+      const tile = getTile(tx, ty);
+
+      if (tile !== 0 && tile !== 2 && canModifyTile(tx, ty) && getBlockDurability(tile) > 0) {
+        interactionTarget = { tx, ty, kind: 'block' };
+        return interactionTarget;
+      }
+
+      interactionTarget = { tx, ty, kind: 'air' };
+      return interactionTarget;
+    }
+
+    function canModifyTile(tx, ty) {
+      if (tx < 0 || ty < 0 || tx >= worldState.width || ty >= worldState.height) return false;
+      const blockLeft = tx * TILE_SIZE;
+      const blockTop  = ty * TILE_SIZE;
+      return (
+        blockLeft + TILE_SIZE <= playerState.x ||
+        blockLeft >= playerState.x + playerState.width ||
+        blockTop  + TILE_SIZE <= playerState.y ||
+        blockTop  >= playerState.y + playerState.height
+      );
+    }
+
+    function hasSolidSupport(tx, ty) {
+      return ty + 1 < worldState.height && getTile(tx, ty + 1) !== 0;
+    }
+
+    function isPlayerTouchingSeed(seed) {
+      const sl = seed.tx * TILE_SIZE, st = seed.ty * TILE_SIZE;
+      return !(sl + TILE_SIZE <= playerState.x || sl >= playerState.x + playerState.width ||
+               st + TILE_SIZE <= playerState.y || st >= playerState.y + playerState.height);
+    }
+
+    // ─── Core break / place ──────────────────────────────────────────────────
+
+    // All receive canvas-LOCAL coords.
+    function tryBreakBlock(localX, localY) {
+      const target = updateInteractionTarget(localX, localY);
+      if (!target) return false;
+
+      if (target.kind === 'seed') {
+        const seed = getSeedAt(target.tx, target.ty);
+        if (seed) damageSeed(seed);
+        return true;
+      }
+
+      if (target.kind === 'block') {
+        damageBlock(target.tx, target.ty);
+        return true;
+      }
+
+      if (mineCooldownRemaining <= 0) {
+        startHandStrike(target.tx, target.ty, false);
+        mineCooldownRemaining = HIT_COOLDOWN;
+      }
+      return true;
+    }
+
+    function tryPlaceBlock(localX, localY) {
+      const selectedItemKey = getSelectedItemKey();
+      const selectedItem = getSelectedItemDef();
+      const worldPos = localToWorld(localX, localY);
+      const tx = Math.floor(worldPos.x / TILE_SIZE);
+      const ty = Math.floor(worldPos.y / TILE_SIZE);
+
+      if (!isWithinPunchRange(tx, ty)) return false;
+
+      if (selectedItem.type === 'seed') {
+        if (getItemQuantity(selectedItemKey) <= 0) return false;
+        if (ty >= worldState.height - 1) return false;
+
+        const existingSeed = getSeedAt(tx, ty);
+        const canUseOnExistingSeed = !!existingSeed;
+        const canPlantIntoAir = getTile(tx, ty) === 0 && !existingSeed && hasSolidSupport(tx, ty);
+        if (!canUseOnExistingSeed && !canPlantIntoAir) return false;
+
+        if (!consumeInventoryItem(selectedItemKey, 1)) return false;
+
+        const interactionResult = resolveSeedInteraction(tx, ty, selectedItem.seedType);
+        if (interactionResult.combined) {
+          playSound('seedPlant');
+          triggerHaptic();
+          return true;
+        }
+
+        if (!canPlantIntoAir || !spawnSeed(selectedItem.seedType, tx, ty)) {
+          addInventoryItem(selectedItemKey, 1);
+          return false;
+        }
+
+        const postPlantResult = resolveSeedInteraction(tx, ty, selectedItem.seedType);
+        playSound('seedPlant');
+        triggerHaptic();
+        if (!postPlantResult.combined) worldState.version++;
+        return true;
+      }
+
+      if (!selectedItem.placeableTile || getItemQuantity(selectedItemKey) <= 0) return false;
+      if (getTile(tx, ty) === 0 && !getSeedAt(tx, ty) && canModifyTile(tx, ty) && ty < worldState.height - 1) {
+        if (!consumeInventoryItem(selectedItemKey, 1)) return false;
+        setTile(tx, ty, selectedItem.placeableTile);
+        triggerHaptic();
+        return true;
+      }
+      return false;
+    }
+
+    function damageBlock(tx, ty) {
+      const selectedItem = getSelectedItemDef();
+      if (!selectedItem.usableForBreaking) return false;
+
+      const tile = getTile(tx, ty);
+      const blockDef = getBlockDef(tile);
+      const durability = getBlockDurability(tile);
+      if (!blockDef || !blockDef.breakable || !durability || tile === 2 || !canModifyTile(tx, ty)) return false;
+
+      if (mineCooldownRemaining > 0) return false;
+
+      const state = getOrCreateBlockDamageState(tx, ty);
+      if (!state) return false;
+
+      startHandStrike(tx, ty);
+      state.currentDamage = Math.min(state.totalDurability, state.currentDamage + 1);
+      state.damagePercent = state.currentDamage / state.totalDurability;
+      state.resetAt = null;
+      mineCooldownRemaining = HIT_COOLDOWN;
+
+      const impactPoint = { x: tx * TILE_SIZE + TILE_SIZE / 2, y: ty * TILE_SIZE + TILE_SIZE / 2 };
+      const particleColor = tile === 4 ? '#9aa3ad' : tile === 5 ? '#ff8c4a' : tile === 3 ? '#5bc96e' : '#b37a45';
+      spawnParticles(impactPoint.x, impactPoint.y, particleColor, 5, 25, 70, 0.12, 0.22, 2, 4);
+
+      if (state.currentDamage >= state.totalDurability) {
+        if (tile === 4) playSound('rockBreak');
+        else if (tile === 1 || tile === 3) playSound('dirtBreak');
+
+        clearBlockDamageState(tx, ty);
+        setTile(tx, ty, 0);
+        applyBlockDrops(tile, tx, ty);
+        spawnParticles(impactPoint.x, impactPoint.y, tile === 4 ? '#8b949e' : tile === 5 ? '#ff6b2c' : tile === 3 ? '#46b95b' : '#9b6b3d', 14, 45, 120, 0.2, 0.4, 3, 6);
+      } else {
+        if (tile === 4) playSound('rockHit');
+        else if (tile === 1 || tile === 3) playSound('dirtHit');
+        worldState.version++;
+      }
+
+      triggerHaptic();
+      return true;
+    }
+
+    // ─── Particles ───────────────────────────────────────────────────────────
+    function spawnParticles(x, y, color, count, speedMin, speedMax, lifeMin, lifeMax, sizeMin, sizeMax) {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = speedMin + Math.random() * (speedMax - speedMin);
+        particles.push({
+          x, y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - Math.random() * 25,
+          life: lifeMin + Math.random() * (lifeMax - lifeMin),
+          maxLife: lifeMin + Math.random() * (lifeMax - lifeMin),
+          size: sizeMin + Math.random() * (sizeMax - sizeMin),
+          color
+        });
+      }
+      if (particles.length > 120) particles.splice(0, particles.length - 120);
+    }
+
+    // ─── Hand animation ──────────────────────────────────────────────────────
+    function startHandStrike(tx, ty, didHit = true) {
+      handAnimation = {
+        tx, ty, didHit,
+        facing: playerState.facing,
+        elapsed: 0,
+        duration: HIT_COOLDOWN
+      };
+    }
+
+    function startAirPunch() {
+      const playerCenterX = playerState.x + playerState.width / 2;
+      const playerCenterY = playerState.y + playerState.height * 0.45;
+      const reach = TILE_SIZE * 1.5;
+      const targetX = playerCenterX + playerState.facing * reach;
+      const targetY = playerCenterY;
+      startHandStrike(Math.floor(targetX / TILE_SIZE), Math.floor(targetY / TILE_SIZE), false);
+      mineCooldownRemaining = HIT_COOLDOWN;
+      return true;
+    }
+
+    // ─── Canvas utils ─────────────────────────────────────────────────────────
+    function resizeCanvas() {
+      const displayWidth  = canvas.clientWidth;
+      const displayHeight = canvas.clientHeight;
+      canvas.width  = displayWidth  * devicePixelRatio;
+      canvas.height = displayHeight * devicePixelRatio;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      applySafeArea();
+    }
+
+    function applySafeArea() {
+      const inset = gameInfo.viewContext === 'full_screen'
+        ? (gameInfo.contentSafeAreaInset || { top:0, right:0, bottom:0, left:0 })
+        : { top:0, right:0, bottom:0, left:0 };
+      inventoryState.safeRightInset = inset.right;
+      inventoryUIGroup.style.top = (18 + inset.top) + 'px';
+      inventoryPanel.style.maxWidth = `min(${INVENTORY_PANEL_MAX_WIDTH}px, calc(100vw - ${24 + inset.left + inset.right}px))`;
+      applyInventoryLayout();
+      leftBtn.style.left   = (16 + inset.left)   + 'px';
+      rightBtn.style.left  = (100 + inset.left)  + 'px';
+      jumpBtn.style.right  = (104 + inset.right) + 'px';
+      punchBtn.style.right = (16 + inset.right)  + 'px';
+      leftBtn.style.bottom  = (24 + inset.bottom) + 'px';
+      rightBtn.style.bottom = (24 + inset.bottom) + 'px';
+      jumpBtn.style.bottom  = (24 + inset.bottom) + 'px';
+      punchBtn.style.bottom = (24 + inset.bottom) + 'px';
+    }
+
+    // ─── Update world ────────────────────────────────────────────────────────
+    function updateWorld(dt) {
+      mineCooldownRemaining = Math.max(0, mineCooldownRemaining - dt);
+
+      if (punchHeld && mineCooldownRemaining <= 0) tryPunchAction();
+
+      updateHandAnimation(dt);
+      updateParticles(dt);
+      updateDroppedItems(dt);
+      updateSeeds(dt);
+
+      for (const [key, state] of blockDamage.entries()) {
+        if (state.resetAt !== null) {
+          state.resetAt -= dt;
+          if (state.resetAt <= 0) { blockDamage.delete(key); worldState.version++; }
+        }
+      }
+
+      // activeMinePointer now stores canvas-local coords — safe to pass directly
+      if (activeMinePointer) {
+        tryBreakBlock(activeMinePointer.x, activeMinePointer.y);
+      } else if (interactionTarget) {
+        interactionTarget = null;
+      }
+
+      for (const [key, state] of blockDamage.entries()) {
+        if (state.resetAt === null) {
+          const [tx, ty] = key.split(',').map(Number);
+          const isActive = interactionTarget && interactionTarget.tx === tx && interactionTarget.ty === ty;
+          if (!isActive && state.currentDamage > 0) state.resetAt = DAMAGE_RESET_DELAY;
+        }
+      }
+    }
+
+    function updateHandAnimation(dt) {
+      if (!handAnimation) return;
+      handAnimation.elapsed += dt;
+      if (handAnimation.elapsed >= handAnimation.duration) handAnimation = null;
+    }
+
+    function updateParticles(dt) {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.life -= dt;
+        if (p.life <= 0) { particles.splice(i, 1); continue; }
+        p.x += p.vx * dt; p.y += p.vy * dt;
+        p.vy += 180 * dt; p.vx *= 0.98;
+      }
+    }
+
+    function updateSeeds(dt) {
+      for (const seed of plantedSeeds) {
+        const def = SEED_DEFS[seed.seedType];
+        if (!def) continue;
+        seed.growth = Math.min(def.growthTime, seed.growth + dt);
+      }
+    }
+
+    function updateDroppedItems(dt) {
+      const pcx = playerState.x + playerState.width / 2;
+      const pcy = playerState.y + playerState.height / 2;
+
+      for (let i = droppedItems.length - 1; i >= 0; i--) {
+        const item = droppedItems[i];
+        item.bob += dt * 4;
+        item.airTime = (item.airTime || 0) + dt;
+
+        if (item.physicsPaused) {
+          const itx = Math.floor(item.x / TILE_SIZE);
+          const ity = Math.floor(item.y / TILE_SIZE);
+          if (!isTileSolid(itx, ity)) { item.physicsPaused = false; item.grounded = false; }
+        }
+
+        if (!item.physicsPaused) {
+          if (!item.grounded) {
+            item.x += item.vx * dt; item.y += item.vy * dt;
+            item.vy += 260 * dt; item.vx *= 0.96;
+            const bty = Math.floor((item.y + 10) / TILE_SIZE);
+            const btx = Math.floor(item.x / TILE_SIZE);
+            if (getTile(btx, bty) !== 0) { item.y = bty * TILE_SIZE - 10; item.vx = 0; item.vy = 0; item.grounded = true; }
+          } else {
+            const bty = Math.floor((item.y + 10) / TILE_SIZE);
+            const btx = Math.floor(item.x / TILE_SIZE);
+            if (getTile(btx, bty) === 0) {
+              item.grounded = false;
+            } else if (item.airTime > 0.12) {
+              const itx2 = Math.floor(item.x / TILE_SIZE);
+              const ity2 = Math.floor(item.y / TILE_SIZE);
+              if (isTileSolid(itx2, ity2)) item.physicsPaused = true;
+            }
+          }
+        }
+
+        if (!item.physicsPaused) {
+          const dx = item.x - pcx, dy = item.y - pcy;
+          if (dx * dx + dy * dy <= 400) { addInventoryItem(item.itemKey, item.quantity); droppedItems.splice(i, 1); }
+        }
+      }
+    }
+
+    function isTileSolid(tx, ty) {
+      const tile = getTile(tx, ty);
+      if (tile === 0) return false;
+      const def = getBlockDef(tile);
+      return !!def;
+    }
+
+    function triggerHaptic() {
+      if (window.RemixSDK && window.RemixSDK.hapticFeedback) window.RemixSDK.hapticFeedback();
+    }
+
+    // ─── Player physics ──────────────────────────────────────────────────────
+    function updatePlayer(dt) {
+      if (input.left && !input.right) {
+        playerState.facing = -1;
+        playerState.vx -= WALK_ACCEL * dt;
+        if (playerState.vx < -WALK_SPEED) playerState.vx = -WALK_SPEED;
+      } else if (input.right && !input.left) {
+        playerState.facing = 1;
+        playerState.vx += WALK_ACCEL * dt;
+        if (playerState.vx > WALK_SPEED) playerState.vx = WALK_SPEED;
+      } else {
+        const friction = playerState.onGround ? GROUND_FRIC : AIR_FRIC;
+        if (playerState.vx > 0) playerState.vx = Math.max(0, playerState.vx - friction * dt);
+        else if (playerState.vx < 0) playerState.vx = Math.min(0, playerState.vx + friction * dt);
+      }
+
+      if (playerState.onGround && input.jumpJustPressed) {
+        playerState.vy = JUMP_VEL;
+        playerState.onGround = false;
+        triggerHaptic();
+      }
+
+      let gravity;
+      if (playerState.vy < 0) gravity = input.jump ? GRAVITY_HOLD : GRAVITY_CANCEL;
+      else gravity = GRAVITY_NORMAL;
+
+      playerState.vy += gravity * dt;
+      playerState.vy = Math.min(playerState.vy, MAX_FALL_SPEED);
+
+      moveAndCollideX(playerState.vx * dt);
+      moveAndCollideY(playerState.vy * dt);
+      input.jumpJustPressed = false;
+    }
+
+    function moveAndCollideX(amount) {
+      playerState.x += amount;
+      if (amount > 0) {
+        const right = playerState.x + playerState.width;
+        const topTile    = Math.floor(playerState.y / TILE_SIZE);
+        const bottomTile = Math.floor((playerState.y + playerState.height - 1) / TILE_SIZE);
+        const tileX = Math.floor((right - 1) / TILE_SIZE);
+        for (let ty = topTile; ty <= bottomTile; ty++) {
+          const tile = getTile(tileX, ty);
+          if (tile === 5) { playerState.vx = -250 + (Math.random() - 0.5) * 60; playerState.x = tileX * TILE_SIZE - playerState.width - 1; return; }
+          if (tile !== 0) { playerState.x = tileX * TILE_SIZE - playerState.width; playerState.vx = 0; break; }
+        }
+      } else if (amount < 0) {
+        const left = playerState.x;
+        const topTile    = Math.floor(playerState.y / TILE_SIZE);
+        const bottomTile = Math.floor((playerState.y + playerState.height - 1) / TILE_SIZE);
+        const tileX = Math.floor(left / TILE_SIZE);
+        for (let ty = topTile; ty <= bottomTile; ty++) {
+          const tile = getTile(tileX, ty);
+          if (tile === 5) { playerState.vx = 250 + (Math.random() - 0.5) * 60; playerState.x = (tileX + 1) * TILE_SIZE + 1; return; }
+          if (tile !== 0) { playerState.x = (tileX + 1) * TILE_SIZE; playerState.vx = 0; break; }
+        }
+      }
+    }
+
+    function moveAndCollideY(amount) {
+      playerState.onGround = false;
+      const previousY = playerState.y;
+      playerState.y += amount;
+
+      if (amount > 0) {
+        const leftTile  = Math.floor(playerState.x / TILE_SIZE);
+        const rightTile = Math.floor((playerState.x + playerState.width - 1) / TILE_SIZE);
+        const startTileY = Math.floor((previousY + playerState.height) / TILE_SIZE);
+        const endTileY   = Math.floor((playerState.y + playerState.height) / TILE_SIZE);
+        for (let tileY = startTileY; tileY <= endTileY; tileY++) {
+          for (let tx = leftTile; tx <= rightTile; tx++) {
+            const tile = getTile(tx, tileY);
+            if (tile === 5) { playerState.vy = -500 + (Math.random()-0.5)*80; playerState.y = tileY * TILE_SIZE - playerState.height - 1; playerState.onGround = false; return; }
+            if (tile !== 0) { playerState.y = tileY * TILE_SIZE - playerState.height; playerState.vy = 0; playerState.onGround = true; return; }
+          }
+        }
+      } else if (amount < 0) {
+        const leftTile  = Math.floor(playerState.x / TILE_SIZE);
+        const rightTile = Math.floor((playerState.x + playerState.width - 1) / TILE_SIZE);
+        const startTileY = Math.floor(previousY / TILE_SIZE);
+        const endTileY   = Math.floor(playerState.y / TILE_SIZE);
+        for (let tileY = startTileY; tileY >= endTileY; tileY--) {
+          for (let tx = leftTile; tx <= rightTile; tx++) {
+            const tile = getTile(tx, tileY);
+            if (tile === 5) { playerState.vy = 250 + (Math.random()-0.5)*60; playerState.y = (tileY + 1) * TILE_SIZE; return; }
+            if (tile !== 0) { playerState.y = (tileY + 1) * TILE_SIZE; playerState.vy = 0; return; }
+          }
+        }
+      } else {
+        const leftTile  = Math.floor(playerState.x / TILE_SIZE);
+        const rightTile = Math.floor((playerState.x + playerState.width - 1) / TILE_SIZE);
+        const footTileY = Math.floor((playerState.y + playerState.height) / TILE_SIZE);
+        if ((playerState.y + playerState.height) === footTileY * TILE_SIZE) {
+          for (let tx = leftTile; tx <= rightTile; tx++) {
+            const tile = getTile(tx, footTileY);
+            if (tile === 5) { playerState.vy = -500 + (Math.random()-0.5)*80; playerState.y = footTileY * TILE_SIZE - playerState.height - 1; playerState.onGround = false; return; }
+            if (tile !== 0) { playerState.onGround = true; playerState.vy = 0; return; }
+          }
+        }
+      }
+    }
+
+    function updateCamera(dt) {
+      const targetX = playerState.x + playerState.width / 2;
+      const targetY = playerState.y + playerState.height / 2;
+      const follow = 1 - Math.pow(0.001, dt * 4.2);
+      cameraState.x += (targetX - cameraState.x) * follow;
+      cameraState.y += (targetY - cameraState.y) * follow;
+      cameraState.zoom += (cameraState.targetZoom - cameraState.zoom) * (1 - Math.pow(0.001, dt * 6));
+
+      const worldPixelWidth  = worldState.width  * TILE_SIZE;
+      const worldPixelHeight = worldState.height * TILE_SIZE;
+      const vw = canvas.width  / devicePixelRatio / cameraState.zoom;
+      const vh = canvas.height / devicePixelRatio / cameraState.zoom;
+      cameraState.x = clamp(cameraState.x, Math.min(vw/2, worldPixelWidth  - vw/2), Math.max(vw/2, worldPixelWidth  - vw/2));
+      cameraState.y = clamp(cameraState.y, Math.min(vh/2, worldPixelHeight - vh/2), Math.max(vh/2, worldPixelHeight - vh/2));
+    }
+
+    // ─── Render ───────────────────────────────────────────────────────────────
+    function render() {
+      const vw = canvas.width / devicePixelRatio;
+      const vh = canvas.height / devicePixelRatio;
+      ctx.clearRect(0, 0, vw, vh);
+      const sky = ctx.createLinearGradient(0, 0, 0, vh);
+      sky.addColorStop(0, '#87d5ff'); sky.addColorStop(1, '#e7f7ff');
+      ctx.fillStyle = sky; ctx.fillRect(0, 0, vw, vh);
+
+      ctx.save();
+      ctx.translate(vw / 2, vh / 2);
+      ctx.scale(cameraState.zoom, cameraState.zoom);
+      ctx.translate(-cameraState.x, -cameraState.y);
+
+      drawWorld();
+      drawSeeds();
+      drawDroppedItems();
+      drawInteractionHand();
+      drawRemotePlayers();
+      drawPlayer();
+      drawParticles();
+      drawSeedTouchUI();
+
+      ctx.restore();
+
+      const selKey = getSelectedItemKey();
+      const qtyLabel = selKey === 'hand' ? '∞' : getItemQuantity(selKey);
+      stats.textContent = `Zoom: ${cameraState.zoom.toFixed(2)}x | Pos: ${Math.floor(playerState.x/TILE_SIZE)}, ${Math.floor(playerState.y/TILE_SIZE)} | Item: ${getSelectedItemDef().name} (${qtyLabel}) | Seeds: ${plantedSeeds.length} | World v${worldState.version}`;
+    }
+
+    function drawWorld() {
+      const left   = Math.floor((cameraState.x - canvas.width  / devicePixelRatio / (2 * cameraState.zoom)) / TILE_SIZE) - 1;
+      const right  = Math.ceil( (cameraState.x + canvas.width  / devicePixelRatio / (2 * cameraState.zoom)) / TILE_SIZE) + 1;
+      const top    = Math.floor((cameraState.y - canvas.height / devicePixelRatio / (2 * cameraState.zoom)) / TILE_SIZE) - 1;
+      const bottom = Math.ceil( (cameraState.y + canvas.height / devicePixelRatio / (2 * cameraState.zoom)) / TILE_SIZE) + 1;
+
+      for (let y = top; y <= bottom; y++) {
+        for (let x = left; x <= right; x++) {
+          const tile = getTile(x, y);
+          if (tile === 0) continue;
+          const px = x * TILE_SIZE, py = y * TILE_SIZE;
+          switch (tile) {
+            case 2: ctx.fillStyle='#111111'; ctx.strokeStyle='#2f2f2f'; break;
+            case 3: ctx.fillStyle='#46b95b'; ctx.strokeStyle='#2f8c42'; break;
+            case 4: ctx.fillStyle='#8b949e'; ctx.strokeStyle='#69727c'; break;
+            case 5: ctx.fillStyle='#ff6b2c'; ctx.strokeStyle='#c74312'; break;
+            default: ctx.fillStyle='#9b6b3d'; ctx.strokeStyle='#7a522d';
+          }
+          ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+          ctx.lineWidth = 1;
+          ctx.strokeRect(px + 0.5, py + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
+          drawBlockCracks(x, y, px, py);
+        }
+      }
+    }
+
+    function drawBlockCracks(tx, ty, px, py) {
+      const state = blockDamage.get(getBlockKey(tx, ty));
+      if (!state || state.damagePercent <= 0) return;
+      const pct = state.damagePercent;
+      const stage = pct <= 0.25 ? 1 : pct <= 0.5 ? 2 : pct <= 0.75 ? 3 : 4;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(30,30,30,0.55)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(px+16, py+4); ctx.lineTo(px+14, py+12); ctx.lineTo(px+18, py+19);
+      if (stage >= 2) {
+        ctx.moveTo(px+9,  py+10); ctx.lineTo(px+16, py+16); ctx.lineTo(px+8,  py+23);
+        ctx.moveTo(px+22, py+9);  ctx.lineTo(px+18, py+16); ctx.lineTo(px+24, py+24);
+      }
+      if (stage >= 3) {
+        ctx.moveTo(px+5,  py+6);  ctx.lineTo(px+11, py+13); ctx.lineTo(px+6,  py+19);
+        ctx.moveTo(px+27, py+5);  ctx.lineTo(px+21, py+13); ctx.lineTo(px+28, py+18);
+        ctx.moveTo(px+13, py+20); ctx.lineTo(px+18, py+27);
+      }
+      if (stage >= 4) {
+        ctx.moveTo(px+4,  py+15); ctx.lineTo(px+10, py+17); ctx.lineTo(px+15, py+28);
+        ctx.moveTo(px+28, py+14); ctx.lineTo(px+21, py+18); ctx.lineTo(px+18, py+29);
+        ctx.moveTo(px+12, py+5);  ctx.lineTo(px+20, py+9);  ctx.lineTo(px+26, py+12);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+
+    function drawSeeds() {
+      for (const seed of plantedSeeds) {
+        const def = SEED_DEFS[seed.seedType];
+        if (!def) continue;
+        const growthPct = clamp(seed.growth / def.growthTime, 0, 1);
+        const baseX = seed.tx * TILE_SIZE + TILE_SIZE / 2;
+        const baseY = seed.ty * TILE_SIZE + TILE_SIZE - 3;
+        const stemHeight = 5 + growthPct * 18;
+        const bloomSize  = 3 + growthPct * 7;
+
+        ctx.save();
+        ctx.strokeStyle = def.stemColor; ctx.lineWidth = 3; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(baseX, baseY); ctx.lineTo(baseX, baseY - stemHeight); ctx.stroke();
+        ctx.fillStyle = def.bloomColor;
+        ctx.globalAlpha = 0.5 + growthPct * 0.5;
+        ctx.beginPath(); ctx.arc(baseX, baseY - stemHeight, bloomSize, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+        if (isSeedMature(seed)) {
+          ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(baseX, baseY - stemHeight, bloomSize + 2, 0, Math.PI * 2); ctx.stroke();
+        }
+        drawBlockCracks(seed.tx, seed.ty, seed.tx * TILE_SIZE, seed.ty * TILE_SIZE);
+        ctx.restore();
+      }
+    }
+
+    function drawSeedTouchUI() {
+      const seed = plantedSeeds.find(e => isPlayerTouchingSeed(e));
+      if (!seed) return;
+      const def = SEED_DEFS[seed.seedType];
+      if (!def) return;
+      const remaining = Math.max(0, Math.ceil(def.growthTime - seed.growth));
+      const bw = 94, bh = 34;
+      const bx = seed.tx * TILE_SIZE + TILE_SIZE / 2 - bw / 2;
+      const by = seed.ty * TILE_SIZE - 42;
+      ctx.save();
+      ctx.fillStyle = '#7ed957'; ctx.strokeStyle = '#347a2a'; ctx.lineWidth = 2;
+      ctx.fillRect(bx, by, bw, bh); ctx.strokeRect(bx+0.5, by+0.5, bw-1, bh-1);
+      ctx.fillStyle = '#17324d'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center';
+      ctx.fillText(def.displayName, bx + bw/2, by + 13);
+      ctx.font = '10px Arial'; ctx.fillText(`${remaining}s left`, bx + bw/2, by + 26);
+      ctx.restore();
+    }
+
+    function drawDroppedItems() {
+      for (const item of droppedItems) {
+        const def = ITEM_DEFS[item.itemKey];
+        if (!def) continue;
+        const bobOffset = Math.sin(item.bob) * 2;
+        const drawX = item.x;
+        const drawY = item.y + bobOffset;
+
+        ctx.save();
+        if (def.type === 'seed') {
+          const seedColors  = { rock:'#9aa3ad', lava:'#ff6b2c', dirt:'#7ac943', grass:'#55c963' };
+          const seedStrokes = { rock:'#6d7680', lava:'#c74312', dirt:'#4d8f24', grass:'#2f8c42' };
+          const sType = def.seedType || 'dirt';
+          ctx.fillStyle   = seedColors[sType]  || '#7ac943';
+          ctx.strokeStyle = seedStrokes[sType] || '#4d8f24';
+          ctx.beginPath();
+          ctx.ellipse(drawX, drawY, 4, 6, -0.4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        } else if (def.type === 'block') {
+          const blockColors  = { 1:'#9b6b3d', 3:'#46b95b', 4:'#8b949e', 5:'#ff6b2c' };
+          const blockStrokes = { 1:'#7a522d', 3:'#2f8c42', 4:'#69727c', 5:'#c74312' };
+          const bid = def.blockId || 1;
+          ctx.fillStyle   = blockColors[bid]  || '#9b6b3d';
+          ctx.strokeStyle = blockStrokes[bid] || '#7a522d';
+          ctx.lineWidth = 1;
+          ctx.fillRect(  drawX - 6, drawY - 6, 12, 12);
+          ctx.strokeRect(drawX - 5.5, drawY - 5.5, 11, 11);
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawInteractionHand() {
+      if (!handAnimation) return;
+      const pcx = playerState.x + playerState.width / 2;
+      const pcy = playerState.y + playerState.height * 0.45;
+
+      let targetX, targetY;
+      if (handAnimation.didHit && handAnimation.tx !== undefined && handAnimation.ty !== undefined) {
+        targetX = handAnimation.tx * TILE_SIZE + TILE_SIZE / 2;
+        targetY = handAnimation.ty * TILE_SIZE + TILE_SIZE / 2;
+      } else {
+        const reach = TILE_SIZE * 1.5;
+        targetX = pcx + handAnimation.facing * reach;
+        targetY = pcy;
+      }
+
+      const progress     = clamp(handAnimation.elapsed / handAnimation.duration, 0, 1);
+      const extendPhase  = 0.42;
+      const strikeProgress = progress < extendPhase
+        ? progress / extendPhase
+        : 1 - easeOutCubic((progress - extendPhase) / (1 - extendPhase));
+      const handX = pcx + (targetX - pcx) * strikeProgress;
+      const handY = pcy + (targetY - pcy) * strikeProgress;
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.82)'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(pcx, pcy); ctx.lineTo(handX, handY); ctx.stroke();
+      ctx.strokeStyle = 'rgba(74,43,24,0.75)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(pcx, pcy); ctx.lineTo(handX, handY); ctx.stroke();
+      ctx.fillStyle = '#ffe0bd';
+      ctx.beginPath(); ctx.arc(handX, handY, 4, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    function drawParticles() {
+      ctx.save();
+      for (const p of particles) {
+        ctx.globalAlpha = clamp(p.life / p.maxLife, 0, 1);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
+      }
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+
+    function drawPlayer() {
+      ctx.fillStyle = playerState.color;
+      ctx.fillRect(playerState.x, playerState.y, playerState.width, playerState.height);
+      ctx.strokeStyle = '#1c4fd6';
+      ctx.strokeRect(playerState.x+0.5, playerState.y+0.5, playerState.width-1, playerState.height-1);
+      const activeChat = myChat.text && Date.now() - myChat.t < CHAT_BUBBLE_MS ? myChat.text : '';
+      drawTextBubble(playerState.x + playerState.width / 2, playerState.y - 7, (myName || 'You') + ' (You)', activeChat, true);
+    }
+
+    // ─── Punch button / tryPunchAction ───────────────────────────────────────
+    function tryPunchAction() {
+      const dir = playerState.facing;
+      const originX = playerState.x + playerState.width / 2;
+      const playerCenterY = playerState.y + playerState.height * 0.5;
+
+      for (let step = 1; step <= 4; step++) {
+        const targetX = originX + dir * step * TILE_SIZE;
+        const tx = Math.floor(targetX / TILE_SIZE);
+        const ty = Math.floor(playerCenterY / TILE_SIZE);
+        if (!isWithinPunchRange(tx, ty)) continue;
+
+        const seed = getSeedAt(tx, ty);
+        if (seed) {
+          if (damageSeed(seed)) return true;
+        }
+
+        const tile = getTile(tx, ty);
+        if (getBlockDurability(tile) && tile !== 2 && canModifyTile(tx, ty)) {
+          if (damageBlock(tx, ty)) return true;
+        }
+      }
+
+      if (mineCooldownRemaining <= 0) return startAirPunch();
+      return false;
+    }
+
+    // ─── Game loop ────────────────────────────────────────────────────────────
+    let accumulator = 0, lastTime = 0;
+
+    function frame(time) {
+      if (!lastTime) lastTime = time;
+      let dt = Math.min((time - lastTime) / 1000, 0.05);
+      lastTime = time;
+      accumulator += dt;
+      while (accumulator >= FIXED_DT) {
+        if (!gameEnded && gameJoined) {
+          updateWorld(FIXED_DT);
+          updatePlayer(FIXED_DT);
+          updateCamera(FIXED_DT);
+          sendNetworkPing(false);
+          checkGameOver();
+          saveTimer += FIXED_DT;
+          if (saveTimer >= SAVE_INTERVAL) {
+            saveTimer = 0;
+            saveGame();
+          }
+        }
+        accumulator -= FIXED_DT;
+      }
+      render();
+      requestAnimationFrame(frame);
+    }
+
+    const SCORE_VALUES = {
+      // Blocks — rarer = more points
+      dirt_block:  1,
+      rock_block:  3,
+      lava_block:  5,
+      grass_block: 2,
+      blue_block:  8,
+      // Seeds — combo seeds worth more
+      seed:        2,
+      rock_seed:   4,
+      lava_seed:   6,
+      grass_seed:  10
+    };
+
+    function calculateScore() {
+      let score = 0;
+      // Weighted inventory value
+      for (const [key, item] of inventoryState.items) {
+        if (key === 'hand') continue;
+        const value = SCORE_VALUES[key] || 1;
+        score += item.quantity * value;
+      }
+      // Planted seeds: base points + maturity bonus
+      for (const seed of plantedSeeds) {
+        const seedDef = SEED_DEFS[seed.seedType];
+        if (!seedDef) continue;
+        const baseValue = SCORE_VALUES[seedDef.itemKey] || 2;
+        score += baseValue;
+        if (isSeedMature(seed)) score += baseValue * 2;
+      }
+      return Math.max(1, score);
+    }
+
+    function saveAndQuit() {
+      if (gameEnded) return;
+      saveGame();
+      gameEnded = true;
+      scoreReported = true;
+      const score = calculateScore();
+      if (window.RemixSDK?.singlePlayer?.actions) {
+        window.RemixSDK.singlePlayer.actions.gameOver({ score });
+      }
+    }
+
+    function resumeFromSave() {
+      // Try SDK state first, then localStorage
+      let loaded = false;
+      if (window.RemixSDK?.gameState) {
+        loaded = loadGameState(window.RemixSDK.gameState);
+      }
+      if (!loaded) {
+        loaded = loadFromLocalStorage();
+      }
+      if (!loaded) {
+        resetGame();
+      }
+      renderInventory();
+    }
+
+    function checkGameOver() {
+      if (playerState.y > worldState.height * TILE_SIZE + 200 && !scoreReported) {
+        saveGame();
+        gameEnded = true; scoreReported = true;
+        const score = calculateScore();
+        if (window.RemixSDK?.singlePlayer?.actions)
+          window.RemixSDK.singlePlayer.actions.gameOver({ score });
+      }
+    }
+
+    // ─── Input setup ─────────────────────────────────────────────────────────
+    function setMoveButton(button, key, pressed) {
+      const on  = (e) => { e.preventDefault(); input[key] = pressed; if (key==='jump' && pressed) input.jumpJustPressed = true; };
+      const off = (e) => { if (e) e.preventDefault(); input[key] = false; };
+      button.addEventListener('pointerdown',  on);
+      button.addEventListener('pointerup',    off);
+      button.addEventListener('pointercancel', off);
+      button.addEventListener('pointerleave', (e) => { if (e.buttons === 0) off(e); });
+    }
+
+    function setupInput() {
+      // ── Keyboard ──
+      window.addEventListener('keydown', (e) => {
+        if (isTypingChat()) return;
+        if (e.code === 'Enter') { chatInput.focus(); return; }
+        if (!gameJoined) return;
+        if (e.repeat && e.code === 'Space') return;
+        if (e.code === 'KeyA'  || e.code === 'ArrowLeft')  input.left  = true;
+        if (e.code === 'KeyD'  || e.code === 'ArrowRight') input.right = true;
+        if (e.code === 'Space') { if (!input.jump) input.jumpJustPressed = true; input.jump = true; }
+        for (let i = 1; i <= QUICK_SLOT_COUNT; i++)
+          if (e.code === `Digit${i}` || e.code === `Numpad${i}`) { setSelectedSlot(i - 1); break; }
+        if (e.code === 'Equal'  || e.code === 'NumpadAdd')      cameraState.targetZoom = clamp(cameraState.targetZoom + ZOOM_STEP, MIN_ZOOM, MAX_ZOOM);
+        if (e.code === 'Minus'  || e.code === 'NumpadSubtract') cameraState.targetZoom = clamp(cameraState.targetZoom - ZOOM_STEP, MIN_ZOOM, MAX_ZOOM);
+      });
+      window.addEventListener('keyup', (e) => {
+        if (isTypingChat()) return;
+        if (e.code === 'KeyA'  || e.code === 'ArrowLeft')  input.left  = false;
+        if (e.code === 'KeyD'  || e.code === 'ArrowRight') input.right = false;
+        if (e.code === 'Space') input.jump = false;
+      });
+
+      // ── Mouse ──
+      canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+      canvas.addEventListener('dragstart',   (e) => e.preventDefault());
+      canvas.addEventListener('selectstart', (e) => e.preventDefault());
+      canvas.addEventListener('dblclick',    (e) => e.preventDefault());
+      canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        cameraState.targetZoom = clamp(cameraState.targetZoom + (e.deltaY > 0 ? -1 : 1) * ZOOM_STEP, MIN_ZOOM, MAX_ZOOM);
+      }, { passive: false });
+
+      canvas.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        canvas.focus({ preventScroll: true });
+        e.preventDefault();
+
+        const clickedUi = e.target && e.target !== canvas;
+        if (clickedUi) return;
+
+        // Convert client → local once, use local coords everywhere
+        const local = clientToLocal(e.clientX, e.clientY);
+        const selectedItem = getSelectedItemDef();
+
+        if (selectedItem.usableForBreaking) {
+          beginInteraction(local.x, local.y);
+          tryBreakBlock(local.x, local.y);
+        } else if (selectedItem.type === 'block' || selectedItem.type === 'seed') {
+          tryPlaceBlock(local.x, local.y);
+          endInteraction();
+        } else {
+          endInteraction();
+        }
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (activeMinePointer && (e.buttons & 1)) {
+          const local = clientToLocal(e.clientX, e.clientY);
+          activeMinePointer.x = local.x;
+          activeMinePointer.y = local.y;
+          updateInteractionTarget(local.x, local.y);
+        }
+      });
+
+      window.addEventListener('mouseup', (e) => {
+        if (e.button === 0) endInteraction();
+      });
+
+      // ── Touch / pointer ──
+      canvas.addEventListener('pointerdown', (e) => {
+        canvas.focus({ preventScroll: true });
+        if (e.pointerType !== 'touch') return;
+        e.preventDefault();
+
+        // Convert client → local once, use local coords everywhere
+        const local = clientToLocal(e.clientX, e.clientY);
+        const selectedItem = getSelectedItemDef();
+
+        if (selectedItem.usableForBreaking) {
+          beginInteraction(local.x, local.y);
+          tryBreakBlock(local.x, local.y);
+        } else if (selectedItem.type === 'block' || selectedItem.type === 'seed') {
+          tryPlaceBlock(local.x, local.y);
+          endInteraction();
+        } else {
+          endInteraction();
+        }
+
+        try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+      });
+
+      canvas.addEventListener('pointermove', (e) => {
+        if (e.pointerType === 'touch' && activeMinePointer) {
+          const local = clientToLocal(e.clientX, e.clientY);
+          activeMinePointer.x = local.x;
+          activeMinePointer.y = local.y;
+          updateInteractionTarget(local.x, local.y);
+        }
+      });
+
+      const stopMining = (e) => {
+        if (!activeMinePointer) return;
+        if (!e || e.pointerType === 'touch') endInteraction();
+      };
+      canvas.addEventListener('pointerup',     stopMining);
+      canvas.addEventListener('pointercancel', stopMining);
+
+      setMoveButton(leftBtn,  'left',  true);
+      setMoveButton(rightBtn, 'right', true);
+      setMoveButton(jumpBtn,  'jump',  true);
+      setupPunchButton();
+      setupInventoryPanel();
+
+      saveQuitBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        saveAndQuit();
+      });
+    }
+
+    function setupPunchButton() {
+      const pressPunch   = (e) => { e.preventDefault(); punchHeld = true;  if (mineCooldownRemaining <= 0) tryPunchAction(); };
+      const releasePunch = (e) => { if (e) e.preventDefault(); punchHeld = false; };
+      punchBtn.addEventListener('pointerdown',  pressPunch);
+      punchBtn.addEventListener('pointerup',    releasePunch);
+      punchBtn.addEventListener('pointercancel', releasePunch);
+      punchBtn.addEventListener('pointerleave', (e) => { if (e.buttons === 0) releasePunch(e); });
+    }
+
+    function applyInventoryLayout() {
+      inventoryState.quickSlots[0] = 'hand';
+      const openAmount = clamp(inventoryState.panelOpenAmount, 0, 1);
+      inventoryState.panelOpen = openAmount >= 0.98;
+      inventoryUIGroup.classList.toggle('open', openAmount > 0);
+      inventoryPanel.classList.toggle('open', openAmount > 0.02);
+      inventoryToggle.style.visibility = 'visible';
+      inventoryToggle.style.opacity    = '1';
+      inventoryUIGroup.style.right = (12 + inventoryState.safeRightInset) + 'px';
+      inventoryPanel.style.transform = `translateY(${(-12 * (1 - openAmount)).toFixed(2)}px) scaleY(${openAmount.toFixed(3)})`;
+      inventoryPanel.style.opacity    = openAmount.toFixed(3);
+    }
+
+    function setInventoryPanelOpen(open) {
+      inventoryState.panelOpen = !!open;
+      inventoryState.panelOpenAmount = open ? 1 : 0;
+      applyInventoryLayout();
+    }
+
+    function toggleInventoryPanel() { setInventoryPanelOpen(!inventoryState.panelOpen); }
+
+    function setupInventoryPanel() {
+      inventoryToggle.addEventListener('click', (e) => {
+        if (inventoryState.movedUiDuringDrag) { inventoryState.movedUiDuringDrag = false; return; }
+        e.preventDefault();
+        toggleInventoryPanel();
+      });
+
+      inventoryToggle.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        inventoryState.dragUiPointerId = e.pointerId;
+        inventoryState.dragUiStartY = e.clientY;
+        inventoryState.dragUiStartOpenAmount = inventoryState.panelOpenAmount;
+        inventoryState.movedUiDuringDrag = false;
+        inventoryToggle.setPointerCapture(e.pointerId);
+      });
+
+      inventoryToggle.addEventListener('pointermove', (e) => {
+        if (inventoryState.dragUiPointerId !== e.pointerId) return;
+        e.preventDefault();
+        const deltaY = inventoryState.dragUiStartY - e.clientY;
+        if (Math.abs(deltaY) > 4) inventoryState.movedUiDuringDrag = true;
+        inventoryState.panelOpenAmount = clamp(inventoryState.dragUiStartOpenAmount + (deltaY / 140), 0, 1);
+        applyInventoryLayout();
+      });
+
+      const endDrag = (e) => {
+        if (inventoryState.dragUiPointerId !== e.pointerId) return;
+        inventoryState.dragUiPointerId = null;
+        inventoryState.panelOpenAmount = inventoryState.panelOpenAmount >= 0.5 ? 1 : 0;
+        inventoryState.panelOpen = inventoryState.panelOpenAmount >= 1;
+        applyInventoryLayout();
+        try { inventoryToggle.releasePointerCapture(e.pointerId); } catch (_) {}
+      };
+      inventoryToggle.addEventListener('pointerup',    endDrag);
+      inventoryToggle.addEventListener('pointercancel', endDrag);
+      setInventoryPanelOpen(false);
+    }
+
+    // ─── Save / Load ────────────────────────────────────────────────────────
+    function getCurrentGameState() {
+      return {
+        version: 1,
+        tiles: worldState.tiles,
+        player: {
+          x: playerState.x, y: playerState.y,
+          vx: playerState.vx, vy: playerState.vy,
+          facing: playerState.facing
+        },
+        inventory: {
+          quickSlots: inventoryState.quickSlots.slice(),
+          selectedIndex: inventoryState.selectedIndex,
+          items: Array.from(inventoryState.items.entries()),
+          panelSlots: inventoryState.panelSlots.slice()
+        },
+        seeds: plantedSeeds.map(s => ({
+          seedType: s.seedType, tx: s.tx, ty: s.ty,
+          growth: s.growth, hits: s.hits, growthTime: s.growthTime
+        })),
+        camera: { zoom: cameraState.zoom, targetZoom: cameraState.targetZoom }
+      };
+    }
+
+    function loadGameState(gs) {
+      if (!gs || gs.version !== 1) return false;
+      try {
+        if (gs.tiles) {
+          worldState.tiles = gs.tiles;
+          worldState.version++;
+        }
+        if (gs.player) {
+          playerState.x = gs.player.x;
+          playerState.y = gs.player.y;
+          playerState.vx = gs.player.vx || 0;
+          playerState.vy = gs.player.vy || 0;
+          playerState.facing = gs.player.facing || 1;
+          playerState.onGround = false;
+        }
+        if (gs.inventory) {
+          inventoryState.quickSlots = gs.inventory.quickSlots || ['hand', null, null, null];
+          inventoryState.selectedIndex = gs.inventory.selectedIndex || 0;
+          inventoryState.items = new Map(gs.inventory.items || [['hand', { key:'hand', quantity:1 }]]);
+          inventoryState.panelSlots = gs.inventory.panelSlots || new Array(INVENTORY_PANEL_SLOTS).fill(null);
+          if (!inventoryState.items.has('hand')) inventoryState.items.set('hand', { key:'hand', quantity:1 });
+          inventoryState.quickSlots[0] = 'hand';
+        }
+        if (gs.seeds) {
+          plantedSeeds.length = 0;
+          for (const s of gs.seeds) plantedSeeds.push({ ...s });
+        }
+        if (gs.camera) {
+          cameraState.zoom = gs.camera.zoom || 1;
+          cameraState.targetZoom = gs.camera.targetZoom || 1;
+        }
+        cameraState.x = playerState.x + playerState.width / 2;
+        cameraState.y = playerState.y + playerState.height / 2;
+        blockDamage.clear();
+        droppedItems.length = 0;
+        gameEnded = false;
+        scoreReported = false;
+        renderInventory();
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function saveGame() {
+      const gameState = getCurrentGameState();
+      // Always save to localStorage as fallback
+      try { localStorage.setItem('remixtopia_save', JSON.stringify(gameState)); } catch (_) {}
+      // Also push to SDK if available
+      if (window.RemixSDK?.singlePlayer?.actions) {
+        try { window.RemixSDK.singlePlayer.actions.saveGameState({ gameState }); } catch (_) {}
+      }
+    }
+
+    function loadFromLocalStorage() {
+      try {
+        const raw = localStorage.getItem('remixtopia_save');
+        if (raw) return loadGameState(JSON.parse(raw));
+      } catch (_) {}
+      return false;
+    }
+
+    function checkPurchasedItems() {
+      if (!window.RemixSDK?.hasItem) return;
+      canSaveGame = !!window.RemixSDK.hasItem('save-game');
+    }
+
+    // ─── SDK ─────────────────────────────────────────────────────────────────
+    async function initSDK() {
+      if (!window.RemixSDK) { loadFromLocalStorage(); return; }
+      try {
+        await window.RemixSDK.ready();
+        if (window.RemixSDK.gameInfo) {
+          gameInfo = {
+            viewContext: window.RemixSDK.gameInfo.viewContext || 'feed',
+            contentSafeAreaInset: window.RemixSDK.gameInfo.contentSafeAreaInset || { top:0, right:0, bottom:0, left:0 }
+          };
+          applySafeArea();
+        }
+        playerInfo = window.RemixSDK.player || null;
+        checkPurchasedItems();
+
+        // Load saved game state — SDK takes priority over localStorage
+        if (window.RemixSDK.gameState) {
+          loadGameState(window.RemixSDK.gameState);
+        } else {
+          loadFromLocalStorage();
+        }
+      } catch (err) {
+        loadFromLocalStorage();
+      }
+
+      if (window.RemixSDK.onGameInfo) window.RemixSDK.onGameInfo((info) => {
+        gameInfo = { viewContext: info.viewContext || 'feed', contentSafeAreaInset: info.contentSafeAreaInset || { top:0, right:0, bottom:0, left:0 } };
+        applySafeArea();
+      });
+      if (window.RemixSDK.onPlayAgain)   window.RemixSDK.onPlayAgain(() => resumeFromSave());
+      if (window.RemixSDK.onToggleMute)  window.RemixSDK.onToggleMute(({ isMuted: m }) => { isMuted = !!m; });
+      if (window.RemixSDK.onPurchaseComplete) window.RemixSDK.onPurchaseComplete(() => checkPurchasedItems());
+    }
+
+    // ─── Login / chat bootstrapping ─────────────────────────────────────────
+    function setupChat() {
+      chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        sendChatMessage(chatInput.value);
+        chatInput.value = '';
+        canvas.focus({ preventScroll: true });
+      });
+
+      chatInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          chatInput.blur();
+          canvas.focus({ preventScroll: true });
+        }
+      });
+    }
+
+    function joinMultiplayerGame() {
+      const cleanName = clampText(usernameInput.value, 15) || ('Player_' + Math.floor(Math.random() * 1000));
+      myName = cleanName;
+      gameJoined = true;
+      loginScreen.style.display = 'none';
+      networkStatus.textContent = 'Connecting...';
+      initNetwork();
+      sendNetworkPing(true);
+      canvas.focus({ preventScroll: true });
+    }
+
+    startButton.addEventListener('click', joinMultiplayerGame);
+    usernameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') joinMultiplayerGame();
+    });
+
+    // ─── Boot ─────────────────────────────────────────────────────────────────
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('beforeunload', () => { if (!gameEnded) saveGame(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden && !gameEnded) saveGame(); });
+    resetGame();
+    resizeCanvas();
+    renderInventory();
+    setupInput();
+    setupChat();
+    initSDK();
+    requestAnimationFrame(frame);
+  </script>
 </body>
 </html>
+
+
+
+
