@@ -151,12 +151,14 @@ class GameScene extends Phaser.Scene {
 
         if (blockDef.solid && blockDef.foreground) {
           this.solidGroup.add(sprite);
-          sprite.refreshBody();
+          if (sprite.body) sprite.body.updateFromGameObject();
         } else if (blockDef.platform) {
           this.platformGroup.add(sprite);
-          sprite.body.setSize(this.TS - 4, 6);
-          sprite.body.setOffset(2, 0);
-          sprite.refreshBody();
+          if (sprite.body) {
+            sprite.body.setSize(this.TS - 4, 6);
+            sprite.body.setOffset(2, 0);
+            sprite.body.updateFromGameObject();
+          }
         }
       }
     }
@@ -621,14 +623,18 @@ class GameScene extends Phaser.Scene {
 
     if (blockDef.solid && blockDef.foreground) {
       this.solidGroup.add(sprite);
-      sprite.body.setSize(this.TS - 2, this.TS - 2);
-      sprite.body.setOffset(1, 1);
-      sprite.refreshBody();
+      if (sprite.body) {
+        sprite.body.setSize(this.TS - 2, this.TS - 2);
+        sprite.body.setOffset(1, 1);
+        sprite.body.updateFromGameObject();
+      }
     } else if (blockDef.platform) {
       this.platformGroup.add(sprite);
-      sprite.body.setSize(this.TS - 4, 6);
-      sprite.body.setOffset(2, 0);
-      sprite.refreshBody();
+      if (sprite.body) {
+        sprite.body.setSize(this.TS - 4, 6);
+        sprite.body.setOffset(2, 0);
+        sprite.body.updateFromGameObject();
+      }
     }
   }
 
