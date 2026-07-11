@@ -122,81 +122,91 @@ function getInventoryPanelItems() {
 export function renderInventory() {
   inventoryState.quickSlots[0] = 'hand';
 
-  // Guard: old quick-slot bar may have been removed in the Growtopia UI update
+  // ── Legacy quick-slot bar ───────────────────────────────────────────────
+  // The old hamburger inventory was replaced by the Growtopia floating window
+  // (see growtopiaUI.js). On the current build `inventoryBar` is null and this
+  // block is a safe no-op — but the rendering is preserved intact so the legacy
+  // bar keeps working if its element is ever re-added to index.html.
   if (inventoryBar) {
     inventoryBar.innerHTML = '';
+    inventoryState.quickSlots.forEach((itemKey, index) => {
+      const slot = document.createElement('button');
+      slot.className = 'inventorySlot' + (index === inventoryState.selectedIndex ? ' selected' : '');
+      slot.type = 'button';
+      slot.dataset.slotIndex = String(index);
+      slot.title = itemKey ? (GameConfig.items[itemKey]?.name || itemKey) : 'Empty';
+      if (itemKey) slot.appendChild(createItemIcon(itemKey));
+      if (itemKey && itemKey !== 'hand') {
+        const qty = document.createElement('div');
+        qty.className = 'inventoryQty';
+        qty.textContent = String(getItemQuantity(itemKey));
+        slot.appendChild(qty);
+      }
+      slot.addEventListener('click', () => setSelectedSlot(index));
+      if (itemKey && index !== 0) {
+        slot.draggable = true;
+        slot.addEventListener('dragstart', (e) => { inventoryState.dragItemKey = itemKey; inventoryState.dragSourceSlot = index; inventoryState.dragSourceType = 'quick'; slot.classList.add('dragging'); e.dataTransfer.setData('text/plain', itemKey); });
+        slot.addEventListener('dragend', () => { inventoryState.dragItemKey = null; inventoryState.dragSourceSlot = null; inventoryState.dragSourceType = null; slot.classList.remove('dragging'); });
+      }
+      slot.addEventListener('dragover', (e) => { if (index === 0) return; e.preventDefault(); slot.classList.add('dragOver'); });
+      slot.addEventListener('dragleave', () => slot.classList.remove('dragOver'));
+      slot.addEventListener('drop', (e) => { if (index === 0) return; e.preventDefault(); slot.classList.remove('dragOver'); handleQuickSlotDrop(index); });
+      inventoryBar.appendChild(slot);
+    });
   }
 
-  // Auto-refresh Growtopia floating inventory
+  // ── Legacy panel contents ───────────────────────────────────────────────
+  // Same guard as above: only rendered when #inventoryPanelContents exists.
+  if (inventoryPanelContents) {
+    inventoryPanelContents.innerHTML = '';
+    const panelItems = getInventoryPanelItems();
+    for (let i = 0; i < panelSlotCount(); i++) {
+      const itemKey = panelItems[i]?.key || null;
+      const entry = document.createElement('div');
+      entry.className = 'inventoryPanelItem' + (itemKey && inventoryState.quickSlots[inventoryState.selectedIndex] === itemKey ? ' selected' : '');
+      if (itemKey) {
+        entry.draggable = true;
+        entry.appendChild(createItemIcon(itemKey));
+        const qty = document.createElement('div'); qty.className = 'inventoryQty'; qty.textContent = String(getItemQuantity(itemKey)); entry.appendChild(qty);
+        entry.addEventListener('dragstart', (e) => { inventoryState.dragItemKey = itemKey; inventoryState.dragSourceSlot = i; inventoryState.dragSourceType = 'panel'; entry.classList.add('dragging'); e.dataTransfer.setData('text/plain', itemKey); });
+        entry.addEventListener('dragend', () => { inventoryState.dragItemKey = null; inventoryState.dragSourceSlot = null; inventoryState.dragSourceType = null; entry.classList.remove('dragging'); });
+        entry.addEventListener('dblclick', () => equipItemToSelectedQuickSlot(itemKey, i));
+
+        // Inventory Shortcut: click moves item to available quick-slot and selects it immediately
+        entry.addEventListener('click', (e) => {
+          if (e.detail > 1) return;
+          if (!itemKey || itemKey === 'hand') return;
+          let targetIndex = -1;
+          for (let q = 1; q < inventoryState.quickSlots.length; q++) {
+            if (!inventoryState.quickSlots[q]) { targetIndex = q; break; }
+          }
+          if (targetIndex === -1) targetIndex = inventoryState.selectedIndex === 0 ? 1 : inventoryState.selectedIndex;
+          if (targetIndex > 0 && targetIndex < inventoryState.quickSlots.length) {
+            const prev = inventoryState.quickSlots[targetIndex];
+            inventoryState.quickSlots[targetIndex] = itemKey;
+            if (typeof i === 'number' && i >= 0 && i < panelSlotCount()) {
+              inventoryState.panelSlots[i] = (prev && prev !== 'hand') ? prev : null;
+            }
+            inventoryState.quickSlots[0] = 'hand';
+            inventoryState.selectedIndex = targetIndex;
+            renderInventory();
+          }
+        });
+      } else {
+        entry.innerHTML = '<div class="itemIconEmpty">□</div>';
+      }
+      entry.addEventListener('dragover', (e) => { e.preventDefault(); entry.classList.add('dragOver'); });
+      entry.addEventListener('dragleave', () => entry.classList.remove('dragOver'));
+      entry.addEventListener('drop', (e) => { e.preventDefault(); entry.classList.remove('dragOver'); handlePanelSlotDrop(i); });
+      inventoryPanelContents.appendChild(entry);
+    }
+  }
+
+  // ── Active UI: the Growtopia floating inventory window ──────────────────
+  // Delegated refresh so the on-screen inventory always reflects inventoryState,
+  // regardless of whether the legacy bar/panel elements exist.
   if (typeof window !== 'undefined' && typeof window.renderGrowtopiaInventory === 'function') {
     window.renderGrowtopiaInventory();
-  }
-  inventoryState.quickSlots.forEach((itemKey, index) => {
-    const slot = document.createElement('button');
-    slot.className = 'inventorySlot' + (index === inventoryState.selectedIndex ? ' selected' : '');
-    slot.type = 'button';
-    slot.dataset.slotIndex = String(index);
-    slot.title = itemKey ? (GameConfig.items[itemKey]?.name || itemKey) : 'Empty';
-    if (itemKey) slot.appendChild(createItemIcon(itemKey));
-    if (itemKey && itemKey !== 'hand') {
-      const qty = document.createElement('div');
-      qty.className = 'inventoryQty';
-      qty.textContent = String(getItemQuantity(itemKey));
-      slot.appendChild(qty);
-    }
-    slot.addEventListener('click', () => setSelectedSlot(index));
-    if (itemKey && index !== 0) {
-      slot.draggable = true;
-      slot.addEventListener('dragstart', (e) => { inventoryState.dragItemKey = itemKey; inventoryState.dragSourceSlot = index; inventoryState.dragSourceType = 'quick'; slot.classList.add('dragging'); e.dataTransfer.setData('text/plain', itemKey); });
-      slot.addEventListener('dragend', () => { inventoryState.dragItemKey = null; inventoryState.dragSourceSlot = null; inventoryState.dragSourceType = null; slot.classList.remove('dragging'); });
-    }
-    slot.addEventListener('dragover', (e) => { if (index === 0) return; e.preventDefault(); slot.classList.add('dragOver'); });
-    slot.addEventListener('dragleave', () => slot.classList.remove('dragOver'));
-    slot.addEventListener('drop', (e) => { if (index === 0) return; e.preventDefault(); slot.classList.remove('dragOver'); handleQuickSlotDrop(index); });
-    inventoryBar.appendChild(slot);
-  });
-
-  if (inventoryPanelContents) inventoryPanelContents.innerHTML = '';
-  const panelItems = getInventoryPanelItems();
-  for (let i = 0; i < panelSlotCount(); i++) {
-    const itemKey = panelItems[i]?.key || null;
-    const entry = document.createElement('div');
-    entry.className = 'inventoryPanelItem' + (itemKey && inventoryState.quickSlots[inventoryState.selectedIndex] === itemKey ? ' selected' : '');
-    if (itemKey) {
-      entry.draggable = true;
-      entry.appendChild(createItemIcon(itemKey));
-      const qty = document.createElement('div'); qty.className = 'inventoryQty'; qty.textContent = String(getItemQuantity(itemKey)); entry.appendChild(qty);
-      entry.addEventListener('dragstart', (e) => { inventoryState.dragItemKey = itemKey; inventoryState.dragSourceSlot = i; inventoryState.dragSourceType = 'panel'; entry.classList.add('dragging'); e.dataTransfer.setData('text/plain', itemKey); });
-      entry.addEventListener('dragend', () => { inventoryState.dragItemKey = null; inventoryState.dragSourceSlot = null; inventoryState.dragSourceType = null; entry.classList.remove('dragging'); });
-      entry.addEventListener('dblclick', () => equipItemToSelectedQuickSlot(itemKey, i));
-
-      // Inventory Shortcut: click moves item to available quick-slot and selects it immediately
-      entry.addEventListener('click', (e) => {
-        if (e.detail > 1) return;
-        if (!itemKey || itemKey === 'hand') return;
-        let targetIndex = -1;
-        for (let q = 1; q < inventoryState.quickSlots.length; q++) {
-          if (!inventoryState.quickSlots[q]) { targetIndex = q; break; }
-        }
-        if (targetIndex === -1) targetIndex = inventoryState.selectedIndex === 0 ? 1 : inventoryState.selectedIndex;
-        if (targetIndex > 0 && targetIndex < inventoryState.quickSlots.length) {
-          const prev = inventoryState.quickSlots[targetIndex];
-          inventoryState.quickSlots[targetIndex] = itemKey;
-          if (typeof i === 'number' && i >= 0 && i < panelSlotCount()) {
-            inventoryState.panelSlots[i] = (prev && prev !== 'hand') ? prev : null;
-          }
-          inventoryState.quickSlots[0] = 'hand';
-          inventoryState.selectedIndex = targetIndex;
-          renderInventory();
-        }
-      });
-    } else {
-      entry.innerHTML = '<div class="itemIconEmpty">□</div>';
-    }
-    entry.addEventListener('dragover', (e) => { e.preventDefault(); entry.classList.add('dragOver'); });
-    entry.addEventListener('dragleave', () => entry.classList.remove('dragOver'));
-    entry.addEventListener('drop', (e) => { e.preventDefault(); entry.classList.remove('dragOver'); handlePanelSlotDrop(i); });
-    inventoryPanelContents.appendChild(entry);
   }
 }
 

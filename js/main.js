@@ -12,7 +12,7 @@ import { installRoundRectPolyfill } from './utils.js';
 import { GameConfig, loadConfig } from './config.js';
 import {
   canvas, inventoryUIGroup, inventoryPanel, inventoryToggle, leftBtn, rightBtn, jumpBtn,
-  punchBtn, loginScreen, usernameInput, startButton, networkStatus
+  punchBtn, loginScreen, usernameInput, startButton, networkStatus, inventoryWindow, initDom
 } from './dom.js';
 
 import { cameraState, updateCamera } from './camera.js';
@@ -220,6 +220,8 @@ function joinMultiplayerGame() {
   setMyName(cleanName);
   setGameJoined(true);
   loginScreen.style.display = 'none';
+  // Reveal the draggable inventory window now that we're in-game.
+  if (inventoryWindow) inventoryWindow.style.display = 'block';
   networkStatus.textContent = 'Connecting...';
   initNetwork();
   sendNetworkPing(true);
@@ -256,6 +258,12 @@ function frame(time) {
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 async function main() {
+  // 0. Resolve every DOM element reference BEFORE any module touches the DOM.
+  //    initDom() audits index.html against dom.js and throws a clear error if
+  //    a required ID is missing — so mismatches fail loudly here instead of
+  //    surfacing later as a confusing null-deref in renderInventory() etc.
+  initDom();
+
   // 1. Load config.json FIRST. Nothing else touches GameConfig until this
   //    resolves, so every module's use of GameConfig.* below is guaranteed
   //    to see fully-populated data.
@@ -298,16 +306,31 @@ async function main() {
   // 4. Initialise world, player, and renderer, then start the loop.
   resetGame();
   doResizeCanvas();
+  // Bring up the Growtopia floating-window UI (incl. the inventory-grid
+  // renderer delegate) BEFORE the first renderInventory(), so the on-screen
+  // inventory reflects state from the very first frame.
+  initGrowtopiaUI();
   renderInventory();
   setupInput();
   setupInventoryPanel();
   setupChat();
-  initGrowtopiaUI();
   initDevMode();
   initGame();
   requestAnimationFrame(frame);
 }
 
-main().catch((err) => {
-  console.error('Failed to boot game:', err);
-});
+// ─── Boot wrapper ────────────────────────────────────────────────────────────
+// Guarantee the document is fully parsed before any element is touched.
+// <script type="module"> is deferred (so DOM is usually ready), but wrapping
+// makes the ordering explicit and bullet-proof across browsers/embeddings.
+function boot() {
+  main().catch((err) => {
+    console.error('Failed to boot game:', err);
+  });
+}
+
+if (typeof document !== 'undefined' && document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot, { once: true });
+} else {
+  boot();
+}

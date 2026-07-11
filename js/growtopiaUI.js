@@ -216,9 +216,11 @@ export function makeChatDraggable() {
 
 // ─── Main Initialization ─────────────────────────────────────────────────
 export function initGrowtopiaUI() {
-  // Show the new inventory window by default
+  // Wire the floating inventory window. It intentionally stays hidden
+  // (display:none in index.html) until the player joins — revealing it over
+  // the login screen would sit on top of the Join button and block input.
+  // main.js shows it inside joinMultiplayerGame() once the player is in-game.
   if (inventoryWindow) {
-    inventoryWindow.style.display = 'block';
     inventoryWindow.style.bottom = '30px';
     inventoryWindow.style.left = '50%';
     inventoryWindow.style.transform = 'translateX(-50%)';
@@ -245,6 +247,13 @@ export function initGrowtopiaUI() {
 
   // Also hide the old touch controls if you want cleaner screen (optional)
   // document.getElementById('touchControls').style.display = 'none';
+}
+
+// Expose the floating-window renderer on window so inventory.js can delegate
+// to it from renderInventory(). Set at module-eval time (not just inside
+// initGrowtopiaUI) so the delegate is available regardless of boot order.
+if (typeof window !== 'undefined') {
+  window.renderGrowtopiaInventory = renderGrowtopiaInventory;
 }
 
 // Export helper so main can refresh the grid when inventory changes

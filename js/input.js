@@ -209,10 +209,13 @@ export function setupInput() {
   setMoveButton(jumpBtn,  'jump',  true);
   setupPunchButton();
 
-  saveQuitBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    hooks.onSaveAndQuit();
-  });
+  // saveQuitBtn is an optional element (absent on the current build) — guard it.
+  if (saveQuitBtn) {
+    saveQuitBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      hooks.onSaveAndQuit();
+    });
+  }
 }
 
 export function consumeJumpJustPressed() {
