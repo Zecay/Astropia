@@ -249,16 +249,22 @@ export function applyInventoryLayout() {
   inventoryState.quickSlots[0] = 'hand';
   const openAmount = clamp(inventoryState.panelOpenAmount, 0, 1);
   inventoryState.panelOpen = openAmount >= 0.98;
-  inventoryUIGroup.classList.toggle('open', openAmount > 0);
-  inventoryPanel.classList.toggle('open', openAmount > 0.02);
-  inventoryToggle.style.visibility = 'visible';
-  inventoryToggle.style.opacity    = '1';
-  // Bottom-center positioning (UI re-layout)
-  inventoryUIGroup.style.left = '50%';
-  inventoryUIGroup.style.right = 'auto';
-  inventoryUIGroup.style.transform = `translateX(-50%)`;
-  inventoryPanel.style.transform = `translateY(${(-12 * (1 - openAmount)).toFixed(2)}px) scaleY(${openAmount.toFixed(3)})`;
-  inventoryPanel.style.opacity    = openAmount.toFixed(3);
+
+  if (inventoryUIGroup) inventoryUIGroup.classList.toggle('open', openAmount > 0);
+  if (inventoryPanel) inventoryPanel.classList.toggle('open', openAmount > 0.02);
+  if (inventoryToggle) {
+    inventoryToggle.style.visibility = 'visible';
+    inventoryToggle.style.opacity = '1';
+  }
+  if (inventoryUIGroup) {
+    inventoryUIGroup.style.left = '50%';
+    inventoryUIGroup.style.right = 'auto';
+    inventoryUIGroup.style.transform = `translateX(-50%)`;
+  }
+  if (inventoryPanel) {
+    inventoryPanel.style.transform = `translateY(${(-12 * (1 - openAmount)).toFixed(2)}px) scaleY(${openAmount.toFixed(3)})`;
+    inventoryPanel.style.opacity = openAmount.toFixed(3);
+  }
 }
 
 export function setInventoryPanelOpen(open) {
@@ -270,6 +276,8 @@ export function setInventoryPanelOpen(open) {
 export function toggleInventoryPanel() { setInventoryPanelOpen(!inventoryState.panelOpen); }
 
 export function setupInventoryPanel() {
+  if (!inventoryToggle) return; // Old UI removed — skip
+
   inventoryToggle.addEventListener('click', (e) => {
     if (inventoryState.movedUiDuringDrag) { inventoryState.movedUiDuringDrag = false; return; }
     e.preventDefault();

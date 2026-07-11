@@ -55,16 +55,19 @@ let saveTimer = 0;
 function applySafeArea() {
   const inset = gameInfo.contentSafeAreaInset || { top:0, right:0, bottom:0, left:0 };
   inventoryState.safeRightInset = inset.right;
-  inventoryUIGroup.style.top = (18 + inset.top) + 'px';
-  inventoryPanel.style.maxWidth = `min(${GameConfig.inventory.panelMaxWidth}px, calc(100vw - ${24 + inset.left + inset.right}px))`;
-  applyInventoryLayout();
+
+  // Guard old inventory elements (they may no longer exist)
+  if (inventoryUIGroup) inventoryUIGroup.style.top = (18 + inset.top) + 'px';
+  if (inventoryPanel) inventoryPanel.style.maxWidth = `min(${GameConfig.inventory.panelMaxWidth}px, calc(100vw - ${24 + inset.left + inset.right}px))`;
+  if (typeof applyInventoryLayout === 'function') applyInventoryLayout();
+
   leftBtn.style.left   = (16 + inset.left)   + 'px';
   rightBtn.style.left  = (100 + inset.left)  + 'px';
   jumpBtn.style.right  = (104 + inset.right) + 'px';
   punchBtn.style.right = (16 + inset.right)  + 'px';
   leftBtn.style.bottom  = (24 + inset.bottom) + 'px';
   rightBtn.style.bottom = (24 + inset.bottom) + 'px';
-  jumpBtn.style.bottom  = (24 + inset.bottom) + 'px';
+  jumpBtn.style.bottom = (24 + inset.bottom) + 'px';
   punchBtn.style.bottom = (24 + inset.bottom) + 'px';
 }
 
@@ -76,8 +79,8 @@ function resetGame() {
   createWorld();
   resetWorldRuntimeState();
   resetInventory();
-  inventoryToggle.classList.remove('dragging');
-  applyInventoryLayout(true);
+  if (inventoryToggle) inventoryToggle.classList.remove('dragging');
+  if (typeof applyInventoryLayout === 'function') applyInventoryLayout(true);
   resetPlayer();
   cameraState.x = playerState.x; cameraState.y = playerState.y;
   cameraState.zoom = 1; cameraState.targetZoom = 1;

@@ -248,4 +248,4 @@ export function initGrowtopiaUI() {
 }
 
 // Export helper so main can refresh the grid when inventory changes
-export { renderGrowtopiaInventory };
+// (already exported above as named export)
