@@ -72,6 +72,130 @@ canvas {
   padding: 8px 16px;
 }
 
+/* ─── Growtopia-style Floating Draggable Windows ────────────────────────── */
+.floating-window {
+  position: absolute;
+  background: #0f1f33;
+  border: 5px solid #4aa3ff;
+  border-radius: 10px;
+  box-shadow: 8px 8px 0 #00000066;
+  z-index: 200;
+  pointer-events: auto;
+  overflow: hidden;
+  font-family: inherit;
+}
+
+.window-header {
+  background: linear-gradient(#1f3b5e, #0f1f33);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: move;
+  user-select: none;
+  border-bottom: 3px solid #4aa3ff;
+  color: #fff;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.window-header .title {
+  flex: 1;
+}
+
+.window-content {
+  padding: 12px;
+  color: #fff;
+}
+
+/* Inventory Window Specific */
+#inventoryWindow {
+  width: 520px;
+  min-height: 380px;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+#inventoryWindow .window-header {
+  background: #1a2b3c;
+}
+
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 6px;
+  padding: 8px;
+  background: #0f1f33;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.inventory-grid .inv-slot {
+  width: 42px;
+  height: 42px;
+  background: #1f3b5e;
+  border: 3px solid #4aa3ff;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transition: transform .05s ease;
+}
+
+.inventory-grid .inv-slot:hover {
+  border-color: #7ed957;
+  transform: scale(1.05);
+}
+
+.inventory-grid .inv-slot .qty {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+}
+
+.inventory-search {
+  width: 100%;
+  padding: 8px 12px;
+  background: #1a2b3c;
+  border: 3px solid #4aa3ff;
+  color: #fff;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.inventory-side {
+  position: absolute;
+  top: 0;
+  right: -70px;
+  width: 68px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inventory-side button {
+  padding: 9px 6px;
+  background: #1f3b5e;
+  border: 3px solid #4aa3ff;
+  color: #fff;
+  font-weight: bold;
+  font-size: 11px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.inventory-side button:hover {
+  background: #2a4f7a;
+}
+
 .panel {
   display: block;
   color: var(--ui-text);

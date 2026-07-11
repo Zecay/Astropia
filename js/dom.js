@@ -12,6 +12,12 @@ export const inventoryPanel = document.getElementById('inventoryPanel');
 export const inventoryPanelContents = document.getElementById('inventoryPanelContents');
 export const inventoryToggle = document.getElementById('inventoryToggle');
 
+// New Growtopia-style floating windows
+export const inventoryWindow = document.getElementById('inventoryWindow');
+export const inventoryHeader = document.getElementById('inventoryHeader');
+export const inventoryGrid = document.getElementById('inventoryGrid');
+export const inventorySearch = document.getElementById('inventorySearch');
+
 export const leftBtn = document.getElementById('leftBtn');
 export const rightBtn = document.getElementById('rightBtn');
 export const jumpBtn = document.getElementById('jumpBtn');

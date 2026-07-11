@@ -149,6 +149,16 @@ function drawWorld() {
       ctx.strokeStyle = def.border || '#7a522d';
       ctx.lineWidth = 1;
       ctx.strokeRect(px + 0.5, py + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
+
+      // Special visibility for Bedrock (ID 2)
+      if (tile === 2) {
+        ctx.fillStyle = 'rgba(0,0,0,0.35)';
+        ctx.fillRect(px + 3, py + 3, TILE_SIZE - 6, TILE_SIZE - 6);
+        ctx.strokeStyle = '#444';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(px + 2, py + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+      }
+
       drawBlockCracks(x, y, px, py);
     }
   }

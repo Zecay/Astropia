@@ -3,6 +3,11 @@ import { GameConfig } from './config.js';
 import { Input, consumeJumpJustPressed } from './input.js';
 import { getTile } from './world.js';
 
+// Dev mode helpers (sync access via global for simplicity)
+function getDevMode() {
+  return window.__devMode || { isNoclip: () => false, isFlyMode: () => false };
+}
+
 // playerState is created with safe zero defaults; initPlayerFromConfig()
 // (called once after config loads, before the game loop starts) fills in the
 // real size/spawn position/color from GameConfig.
@@ -38,6 +43,36 @@ export function resetPlayer() {
 export function updatePlayer(dt) {
   const { walkSpeed, walkAccel, friction, jumpVel, gravityHold, gravityNormal, maxFallSpeed, gravityCancel } = GameConfig.physics;
 
+  const dev = getDevMode();
+  const noclip = dev.isNoclip();
+  const fly = dev.isFlyMode();
+
+  // Noclip: skip all collision
+  if (noclip) {
+    // Free movement in all directions
+    if (Input.left && !Input.right) {
+      playerState.facing = -1;
+      playerState.x -= walkSpeed * dt * 1.3;
+    } else if (Input.right && !Input.left) {
+      playerState.facing = 1;
+      playerState.x += walkSpeed * dt * 1.3;
+    }
+
+    if (Input.jump) {
+      playerState.y -= walkSpeed * dt * 1.3;
+    }
+    if (Input.right && Input.left) { // optional: shift down if both arrows pressed
+      playerState.y += walkSpeed * dt * 1.3;
+    }
+
+    playerState.vx = 0;
+    playerState.vy = 0;
+    playerState.onGround = true;
+    consumeJumpJustPressed();
+    return;
+  }
+
+  // Normal movement
   if (Input.left && !Input.right) {
     playerState.facing = -1;
     playerState.vx -= walkAccel * dt;
@@ -53,18 +88,30 @@ export function updatePlayer(dt) {
     else if (playerState.vx < 0) playerState.vx = Math.min(0, playerState.vx + stopFriction * dt);
   }
 
-  if (playerState.onGround && Input.jumpJustPressed) {
-    playerState.vy = jumpVel;
+  // Fly mode overrides gravity
+  if (fly) {
+    if (Input.jump) {
+      playerState.vy = -walkSpeed * 1.2;
+    } else if (Input.right && Input.left) { // hold both arrows = descend
+      playerState.vy = walkSpeed * 1.2;
+    } else {
+      playerState.vy *= 0.6; // slow hover
+    }
     playerState.onGround = false;
-    triggerHaptic();
+  } else {
+    if (playerState.onGround && Input.jumpJustPressed) {
+      playerState.vy = jumpVel;
+      playerState.onGround = false;
+      triggerHaptic();
+    }
+
+    let gravity;
+    if (playerState.vy < 0) gravity = Input.jump ? gravityHold : gravityCancel;
+    else gravity = gravityNormal;
+
+    playerState.vy += gravity * dt;
+    playerState.vy = Math.min(playerState.vy, maxFallSpeed);
   }
-
-  let gravity;
-  if (playerState.vy < 0) gravity = Input.jump ? gravityHold : gravityCancel;
-  else gravity = gravityNormal;
-
-  playerState.vy += gravity * dt;
-  playerState.vy = Math.min(playerState.vy, maxFallSpeed);
 
   moveAndCollideX(playerState.vx * dt);
   moveAndCollideY(playerState.vy * dt);

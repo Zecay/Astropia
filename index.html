@@ -19,24 +19,31 @@
   <canvas id="game" tabindex="0"></canvas>
   <div id="hud">
     <div id="hudInner">
-      <div class="panel">A/D or ←/→ move · Space hold jump<br>1-4 select quick slot · Mouse wheel zoom · Click 📦 to open inventory · Left click break/place · Walk into drops to collect</div>
       <div class="panel" id="stats">Zoom: 1.00x</div>
     </div>
   </div>
-  <div id="inventoryUIGroup">
-    <div id="inventoryTopRow">
-      <div id="inventoryToggle">
-        <div class="hamburger">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-      </div>
-      <div id="inventoryBar"></div>
+  <!-- New Growtopia-style Floating Inventory Window -->
+  <div id="inventoryWindow" class="floating-window" style="display: none;">
+    <div class="window-header" id="inventoryHeader">
+      <div class="title">Inventory</div>
+      <div style="font-size:11px; opacity:0.7;">Drag header to move</div>
     </div>
-    <div id="inventoryPanel">
-      <div id="inventoryPanelContents"></div>
-      <button id="saveQuitBtn">Save & Quit</button>
+    
+    <div class="window-content">
+      <!-- Search Bar -->
+      <input type="text" id="inventorySearch" class="inventory-search" placeholder="Enter Item Name...">
+      
+      <!-- Item Grid -->
+      <div id="inventoryGrid" class="inventory-grid"></div>
+      
+      <!-- Side Action Buttons -->
+      <div class="inventory-side">
+        <button id="btnRecycle">RECYCLE</button>
+        <button id="btnStore">STORE</button>
+        <button id="btnDrop">DROP</button>
+        <button id="btnInfo">INFO</button>
+        <button id="btnFav">FAV</button>
+      </div>
     </div>
   </div>
   <div id="touchControls">

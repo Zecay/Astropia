@@ -15,7 +15,7 @@
     "worldWidth": 100,
     "worldHeight": 60,
     "groundRow": 20,
-    "minZoom": 0.3,
+    "minZoom": 0.7,
     "maxZoom": 4.0,
     "zoomStep": 0.1,
     "fixedDt": 0.016666666666666666

@@ -33,6 +33,7 @@ import {
   getSelectedItemDef, applyInventoryLayout, setInventoryPanelOpen,
   setupInventoryPanel
 } from './inventory.js';
+import { initGrowtopiaUI, renderGrowtopiaInventory } from './growtopiaUI.js';
 
 import {
   gameJoined, setGameJoined, setMyName, initNetwork, sendNetworkPing,
@@ -40,6 +41,7 @@ import {
 } from './network.js';
 
 import { draw, resizeCanvas, loadTileset } from './renderer.js';
+import { initDevMode, toggleDevPanel } from './devMode.js';
 
 // ─── Game info (safe-area insets; no SDK, so always zero) ──────────────────
 const gameInfo = {
@@ -206,7 +208,7 @@ function checkGameOver() {
 // ─── Local game init (loads any previous save from localStorage) ──────────
 function initGame() {
   applySafeArea();
-  loadFromLocalStorage();
+  // loadFromLocalStorage();   // Disabled for fresh world testing
 }
 
 // ─── Login bootstrapping ────────────────────────────────────────────────────
@@ -237,11 +239,11 @@ function frame(time) {
       updateCamera(FIXED_DT, playerState, worldState);
       sendNetworkPing(false);
       checkGameOver();
-      saveTimer += FIXED_DT;
-      if (saveTimer >= GameConfig.timings.saveIntervalSec) {
-        saveTimer = 0;
-        saveGame();
-      }
+      // saveTimer += FIXED_DT;
+      // if (saveTimer >= GameConfig.timings.saveIntervalSec) {
+      //   saveTimer = 0;
+      //   saveGame();
+      // }
     }
     accumulator -= FIXED_DT;
   }
@@ -286,8 +288,9 @@ async function main() {
   });
 
   window.addEventListener('resize', doResizeCanvas);
-  window.addEventListener('beforeunload', () => { if (!gameEnded) saveGame(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden && !gameEnded) saveGame(); });
+  // Temporarily disabled saving/loading for testing (fresh world every run)
+  // window.addEventListener('beforeunload', () => { if (!gameEnded) saveGame(); });
+  // document.addEventListener('visibilitychange', () => { if (document.hidden && !gameEnded) saveGame(); });
 
   // 4. Initialise world, player, and renderer, then start the loop.
   resetGame();
@@ -296,6 +299,8 @@ async function main() {
   setupInput();
   setupInventoryPanel();
   setupChat();
+  initGrowtopiaUI();
+  initDevMode();
   initGame();
   requestAnimationFrame(frame);
 }

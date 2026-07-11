@@ -122,6 +122,11 @@ function getInventoryPanelItems() {
 export function renderInventory() {
   inventoryState.quickSlots[0] = 'hand';
   inventoryBar.innerHTML = '';
+
+  // Auto-refresh Growtopia floating inventory
+  if (typeof window !== 'undefined' && typeof window.renderGrowtopiaInventory === 'function') {
+    window.renderGrowtopiaInventory();
+  }
   inventoryState.quickSlots.forEach((itemKey, index) => {
     const slot = document.createElement('button');
     slot.className = 'inventorySlot' + (index === inventoryState.selectedIndex ? ' selected' : '');
