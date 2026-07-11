@@ -7,10 +7,10 @@ export const ctx = canvas.getContext('2d');
 export const stats = document.getElementById('stats');
 
 // Old inventory elements (may be null after Growtopia UI migration)
-export const inventoryUIGroup = document.getElementById('inventoryUIGroup');
-export const inventoryBar = document.getElementById('inventoryBar');
-export const inventoryPanel = document.getElementById('inventoryPanel');
-export const inventoryPanelContents = document.getElementById('inventoryPanelContents');
+export const inventoryUIGroup = document.getElementById('inventoryUIGroup') || null;
+export const inventoryBar = document.getElementById('inventoryBar') || null;
+export const inventoryPanel = document.getElementById('inventoryPanel') || null;
+export const inventoryPanelContents = document.getElementById('inventoryPanelContents') || null;
 export const inventoryToggle = document.getElementById('inventoryToggle') || null;
 
 // New Growtopia-style floating windows

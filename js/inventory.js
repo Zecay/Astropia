@@ -121,7 +121,11 @@ function getInventoryPanelItems() {
 
 export function renderInventory() {
   inventoryState.quickSlots[0] = 'hand';
-  inventoryBar.innerHTML = '';
+
+  // Guard: old quick-slot bar may have been removed in the Growtopia UI update
+  if (inventoryBar) {
+    inventoryBar.innerHTML = '';
+  }
 
   // Auto-refresh Growtopia floating inventory
   if (typeof window !== 'undefined' && typeof window.renderGrowtopiaInventory === 'function') {
@@ -152,7 +156,7 @@ export function renderInventory() {
     inventoryBar.appendChild(slot);
   });
 
-  inventoryPanelContents.innerHTML = '';
+  if (inventoryPanelContents) inventoryPanelContents.innerHTML = '';
   const panelItems = getInventoryPanelItems();
   for (let i = 0; i < panelSlotCount(); i++) {
     const itemKey = panelItems[i]?.key || null;
