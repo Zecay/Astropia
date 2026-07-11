@@ -2,8 +2,11 @@
 // Owns the background sync Worker, the shared `allPlayers` snapshot, and the
 // entire chat UI. renderer.js reads `allPlayers` / `remoteVisuals` / `myChat`
 // to draw remote players and speech bubbles, but never writes to them.
+//
+// Server URL, ping interval, and chat timing all come from GameConfig so
+// they stay in lockstep with config.json — nothing here is hardcoded.
 
-import { SERVER_URL, NETWORK_INTERVAL_MS, CHAT_BUBBLE_MS, CHAT_LOG_MS } from './constants.js';
+import { GameConfig } from './config.js';
 import { chatInput, chatLog, chatForm, usernameInput, networkStatus, canvas } from './dom.js';
 import { playerState } from './player.js';
 
@@ -42,6 +45,8 @@ export function parseNetworkPayload(player, fallbackId) {
 
 export function initNetwork() {
   if (networkWorker) return;
+  const networkIntervalMs = GameConfig.timings.networkIntervalMs;
+  const serverUrl = GameConfig.network.serverUrl;
   try {
     const workerCode = `
       let X = 0, Y = 0, NM = '', ID = '', URL = '', timer = null;
@@ -59,7 +64,7 @@ export function initNetwork() {
         if (typeof d.name === 'string') NM = d.name;
         if (typeof d.x === 'number') X = d.x;
         if (typeof d.y === 'number') Y = d.y;
-        if (d.init && !timer) { tick(); timer = setInterval(tick, ${NETWORK_INTERVAL_MS}); }
+        if (d.init && !timer) { tick(); timer = setInterval(tick, ${networkIntervalMs}); }
       };
     `;
     const blob = new Blob([workerCode], { type: 'text/javascript' });
@@ -84,7 +89,7 @@ export function sendNetworkPing(init = false) {
   if (!networkWorker || !gameJoined) return;
   networkWorker.postMessage({
     init,
-    url: SERVER_URL,
+    url: GameConfig.network.serverUrl,
     id: myId,
     name: makeNetworkPayload(),
     x: playerState.x,
@@ -104,7 +109,7 @@ function addChatLine(name, text) {
   line.appendChild(span);
   chatLog.appendChild(line);
   while (chatLog.children.length > 8) chatLog.removeChild(chatLog.firstChild);
-  setTimeout(() => { if (line.parentNode) line.parentNode.removeChild(line); }, CHAT_LOG_MS);
+  setTimeout(() => { if (line.parentNode) line.parentNode.removeChild(line); }, GameConfig.timings.chatLogMs);
 }
 
 function processRemoteChatMessages() {

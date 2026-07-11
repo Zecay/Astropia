@@ -1,30 +1,32 @@
 // ─── Main: glue / bootstrap ─────────────────────────────────────────────────
-// Imports every module, initialises the game (SDK, world, player, inventory),
-// and runs the requestAnimationFrame loop, calling updatePlayer(), 
-// updateWorld(), updateSeeds() (via updateWorld) and renderer.draw() in order.
+// Imports every module, initialises the game (config, world, player,
+// renderer), and runs the requestAnimationFrame loop, calling updatePlayer(),
+// updateWorld() (which drives updateSeeds() internally) and renderer.draw()
+// in order.
+//
+// Boot is now async: main() awaits loadConfig() before touching world/
+// player/renderer, so GameConfig is fully populated before any other module
+// reads a single value out of it.
 
 import { installRoundRectPolyfill } from './utils.js';
-import {
-  FIXED_DT, TILE_SIZE, GROUND_ROW, INVENTORY_PANEL_SLOTS, SAVE_INTERVAL,
-  SCORE_VALUES, INVENTORY_PANEL_MAX_WIDTH
-} from './constants.js';
+import { GameConfig, loadConfig } from './config.js';
 import {
   canvas, inventoryUIGroup, inventoryPanel, inventoryToggle, leftBtn, rightBtn, jumpBtn,
   punchBtn, loginScreen, usernameInput, startButton, networkStatus
 } from './dom.js';
 
 import { cameraState, updateCamera } from './camera.js';
-import { playerState, updatePlayer, resetPlayer } from './player.js';
+import { playerState, updatePlayer, resetPlayer, initPlayerFromConfig } from './player.js';
 import { setupInput, configureInput } from './input.js';
 
 import {
-  worldState, createWorld, updateWorld, resetWorldRuntimeState,
+  worldState, createWorld, updateWorld, resetWorldRuntimeState, initWorldFromConfig,
   beginInteraction, endInteraction, tryBreakBlock, tryPlaceBlock,
   updateInteractionTarget, updateMinePointer, isMining, tryPunchAction,
   blockDamage, droppedItems
 } from './world.js';
 
-import { plantedSeeds, resetSeeds } from './seeds.js';
+import { plantedSeeds, resetSeeds, isSeedMature } from './seeds.js';
 
 import {
   inventoryState, resetInventory, renderInventory, setSelectedSlot,
@@ -37,9 +39,7 @@ import {
   isTypingChat, setupChat
 } from './network.js';
 
-import { draw, resizeCanvas } from './renderer.js';
-import { SEED_DEFS } from './constants.js';
-import { isSeedMature } from './seeds.js';
+import { draw, resizeCanvas, loadTileset } from './renderer.js';
 
 // ─── Game info (safe-area insets; no SDK, so always zero) ──────────────────
 const gameInfo = {
@@ -50,14 +50,11 @@ let gameEnded = false;
 let scoreReported = false;
 let saveTimer = 0;
 
-// ─── Boot-time setup ─────────────────────────────────────────────────────────
-installRoundRectPolyfill();
-
 function applySafeArea() {
   const inset = gameInfo.contentSafeAreaInset || { top:0, right:0, bottom:0, left:0 };
   inventoryState.safeRightInset = inset.right;
   inventoryUIGroup.style.top = (18 + inset.top) + 'px';
-  inventoryPanel.style.maxWidth = `min(${INVENTORY_PANEL_MAX_WIDTH}px, calc(100vw - ${24 + inset.left + inset.right}px))`;
+  inventoryPanel.style.maxWidth = `min(${GameConfig.inventory.panelMaxWidth}px, calc(100vw - ${24 + inset.left + inset.right}px))`;
   applyInventoryLayout();
   leftBtn.style.left   = (16 + inset.left)   + 'px';
   rightBtn.style.left  = (100 + inset.left)  + 'px';
@@ -88,6 +85,7 @@ function resetGame() {
 
 // ─── Score / save / load ─────────────────────────────────────────────────────
 function calculateScore() {
+  const SCORE_VALUES = GameConfig.scoreValues;
   let score = 0;
   // Weighted inventory value
   for (const [key, item] of inventoryState.items) {
@@ -97,7 +95,7 @@ function calculateScore() {
   }
   // Planted seeds: base points + maturity bonus
   for (const seed of plantedSeeds) {
-    const seedDef = SEED_DEFS[seed.seedType];
+    const seedDef = GameConfig.seeds[seed.seedType];
     if (!seedDef) continue;
     const baseValue = SCORE_VALUES[seedDef.itemKey] || 2;
     score += baseValue;
@@ -148,7 +146,7 @@ function loadGameState(gs) {
       inventoryState.quickSlots = gs.inventory.quickSlots || ['hand', null, null, null];
       inventoryState.selectedIndex = gs.inventory.selectedIndex || 0;
       inventoryState.items = new Map(gs.inventory.items || [['hand', { key:'hand', quantity:1 }]]);
-      inventoryState.panelSlots = gs.inventory.panelSlots || new Array(INVENTORY_PANEL_SLOTS).fill(null);
+      inventoryState.panelSlots = gs.inventory.panelSlots || new Array(GameConfig.inventory.panelSlots).fill(null);
       if (!inventoryState.items.has('hand')) inventoryState.items.set('hand', { key:'hand', quantity:1 });
       inventoryState.quickSlots[0] = 'hand';
     }
@@ -196,6 +194,7 @@ function saveAndQuit() {
 }
 
 function checkGameOver() {
+  const TILE_SIZE = GameConfig.world.tileSize;
   if (playerState.y > worldState.height * TILE_SIZE + 200 && !scoreReported) {
     saveGame();
     gameEnded = true; scoreReported = true;
@@ -222,32 +221,11 @@ function joinMultiplayerGame() {
   canvas.focus({ preventScroll: true });
 }
 
-startButton.addEventListener('click', joinMultiplayerGame);
-usernameInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') joinMultiplayerGame();
-});
-
-// ─── Wire Input hooks (keeps input.js decoupled from world/inventory) ──────
-configureInput({
-  isTypingChat,
-  isGameJoined: () => gameJoined,
-  getSelectedItemDef,
-  beginInteraction,
-  tryBreakBlock,
-  tryPlaceBlock,
-  endInteraction,
-  updateInteractionTarget,
-  updateMinePointer,
-  isMining,
-  setSelectedSlot,
-  tryPunchAction,
-  onSaveAndQuit: saveAndQuit
-});
-
 // ─── Game loop ────────────────────────────────────────────────────────────────
 let accumulator = 0, lastTime = 0;
 
 function frame(time) {
+  const FIXED_DT = GameConfig.world.fixedDt;
   if (!lastTime) lastTime = time;
   let dt = Math.min((time - lastTime) / 1000, 0.05);
   lastTime = time;
@@ -260,7 +238,7 @@ function frame(time) {
       sendNetworkPing(false);
       checkGameOver();
       saveTimer += FIXED_DT;
-      if (saveTimer >= SAVE_INTERVAL) {
+      if (saveTimer >= GameConfig.timings.saveIntervalSec) {
         saveTimer = 0;
         saveGame();
       }
@@ -272,15 +250,56 @@ function frame(time) {
 }
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
-window.addEventListener('resize', doResizeCanvas);
-window.addEventListener('beforeunload', () => { if (!gameEnded) saveGame(); });
-document.addEventListener('visibilitychange', () => { if (document.hidden && !gameEnded) saveGame(); });
+async function main() {
+  // 1. Load config.json FIRST. Nothing else touches GameConfig until this
+  //    resolves, so every module's use of GameConfig.* below is guaranteed
+  //    to see fully-populated data.
+  await loadConfig('config.json');
 
-resetGame();
-doResizeCanvas();
-renderInventory();
-setupInput();
-setupInventoryPanel();
-setupChat();
-initGame();
-requestAnimationFrame(frame);
+  // 2. Now that config is loaded, initialise world/player defaults that
+  //    depend on it (tile size, world dimensions, spawn point, etc).
+  installRoundRectPolyfill();
+  initWorldFromConfig();
+  initPlayerFromConfig();
+  loadTileset();
+
+  // 3. Wire Input hooks (keeps input.js decoupled from world/inventory).
+  configureInput({
+    isTypingChat,
+    isGameJoined: () => gameJoined,
+    getSelectedItemDef,
+    beginInteraction,
+    tryBreakBlock,
+    tryPlaceBlock,
+    endInteraction,
+    updateInteractionTarget,
+    updateMinePointer,
+    isMining,
+    setSelectedSlot,
+    tryPunchAction,
+    onSaveAndQuit: saveAndQuit
+  });
+
+  startButton.addEventListener('click', joinMultiplayerGame);
+  usernameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') joinMultiplayerGame();
+  });
+
+  window.addEventListener('resize', doResizeCanvas);
+  window.addEventListener('beforeunload', () => { if (!gameEnded) saveGame(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && !gameEnded) saveGame(); });
+
+  // 4. Initialise world, player, and renderer, then start the loop.
+  resetGame();
+  doResizeCanvas();
+  renderInventory();
+  setupInput();
+  setupInventoryPanel();
+  setupChat();
+  initGame();
+  requestAnimationFrame(frame);
+}
+
+main().catch((err) => {
+  console.error('Failed to boot game:', err);
+});

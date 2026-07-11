@@ -10,10 +10,7 @@
 // (never at module-evaluation time), so the circular ES module import is
 // safe.
 
-import {
-  TILE_SIZE, WORLD_WIDTH, WORLD_HEIGHT, GROUND_ROW, HIT_COOLDOWN, DAMAGE_RESET_DELAY,
-  BLOCK_DEFS, ITEM_DEFS, SEED_DEFS
-} from './constants.js';
+import { GameConfig } from './config.js';
 import { localToWorld } from './utils.js';
 import { playerState, triggerHaptic } from './player.js';
 import { getPunchHeld } from './input.js';
@@ -28,9 +25,17 @@ import {
 } from './seeds.js';
 
 // ─── World generation ───────────────────────────────────────────────────────
-export const worldState = { width: WORLD_WIDTH, height: WORLD_HEIGHT, tiles: [], version: 0 };
+// width/height default to 0 until initWorldFromConfig() runs (right after
+// config load, before createWorld() is ever called).
+export const worldState = { width: 0, height: 0, tiles: [], version: 0 };
+
+export function initWorldFromConfig() {
+  worldState.width = GameConfig.world.worldWidth;
+  worldState.height = GameConfig.world.worldHeight;
+}
 
 export function createWorld() {
+  const GROUND_ROW = GameConfig.world.groundRow;
   // Deterministic baseline map so every multiplayer client starts with the same terrain.
   let seed = 133742069;
   const rand = () => {
@@ -80,7 +85,7 @@ export function setTile(tx, ty, value) {
 }
 
 export function getBlockDef(tile) {
-  return BLOCK_DEFS[tile] || null;
+  return GameConfig.blocksByTile[tile] || null;
 }
 export function getBlockDurability(tile) { const d = getBlockDef(tile); return d ? d.durability || 0 : 0; }
 
@@ -93,6 +98,7 @@ export function isTileSolid(tx, ty) {
 
 // ─── Range / collision checks ───────────────────────────────────────────────
 export function isWithinPunchRange(tx, ty) {
+  const TILE_SIZE = GameConfig.world.tileSize;
   const playerCenterX = playerState.x + playerState.width / 2;
   const playerCenterY = playerState.y + playerState.height / 2;
   const targetCenterX = tx * TILE_SIZE + TILE_SIZE / 2;
@@ -103,6 +109,7 @@ export function isWithinPunchRange(tx, ty) {
 }
 
 export function canModifyTile(tx, ty) {
+  const TILE_SIZE = GameConfig.world.tileSize;
   if (tx < 0 || ty < 0 || tx >= worldState.width || ty >= worldState.height) return false;
   const blockLeft = tx * TILE_SIZE;
   const blockTop  = ty * TILE_SIZE;
@@ -126,7 +133,7 @@ export function getBlockKey(tx, ty) { return `${tx},${ty}`; }
 export function getOrCreateBlockDamageState(tx, ty) {
   const seed = getSeedAt(tx, ty);
   if (seed && !isSeedMature(seed)) {
-    const def = SEED_DEFS[seed.seedType];
+    const def = GameConfig.seeds[seed.seedType];
     if (!def) return null;
     const key = getBlockKey(tx, ty);
     let state = blockDamage.get(key);
@@ -184,7 +191,7 @@ function updateParticles(dt) {
 export const droppedItems = [];
 
 export function spawnDroppedItem(itemKey, x, y, quantity = 1) {
-  if (!ITEM_DEFS[itemKey] || quantity <= 0) return;
+  if (!GameConfig.items[itemKey] || quantity <= 0) return;
   droppedItems.push({
     itemKey, quantity, x, y,
     vx: (Math.random() - 0.5) * 50,
@@ -196,6 +203,7 @@ export function spawnDroppedItem(itemKey, x, y, quantity = 1) {
 }
 
 export function applyBlockDrops(tile, tx, ty) {
+  const TILE_SIZE = GameConfig.world.tileSize;
   const def = getBlockDef(tile);
   if (!def || !def.dropTable) return;
   const spawnX = tx * TILE_SIZE + TILE_SIZE / 2;
@@ -206,6 +214,7 @@ export function applyBlockDrops(tile, tx, ty) {
 }
 
 function updateDroppedItems(dt) {
+  const TILE_SIZE = GameConfig.world.tileSize;
   const pcx = playerState.x + playerState.width / 2;
   const pcy = playerState.y + playerState.height / 2;
 
@@ -256,6 +265,7 @@ export const miningState = {
 };
 
 export function beginInteraction(localX, localY) {
+  const TILE_SIZE = GameConfig.world.tileSize;
   const worldPos = localToWorld(localX, localY);
   const tx = Math.floor(worldPos.x / TILE_SIZE);
   const ty = Math.floor(worldPos.y / TILE_SIZE);
@@ -282,6 +292,7 @@ export function endInteraction() {
 }
 
 export function updateInteractionTarget(localX, localY) {
+  const TILE_SIZE = GameConfig.world.tileSize;
   const worldPos = localToWorld(localX, localY);
   const tx = Math.floor(worldPos.x / TILE_SIZE);
   const ty = Math.floor(worldPos.y / TILE_SIZE);
@@ -311,6 +322,7 @@ export function updateInteractionTarget(localX, localY) {
 // ─── Core break / place ──────────────────────────────────────────────────
 // All receive canvas-LOCAL coords.
 export function tryBreakBlock(localX, localY) {
+  const HIT_COOLDOWN = GameConfig.timings.hitCooldown;
   const target = updateInteractionTarget(localX, localY);
   if (!target) return false;
 
@@ -333,6 +345,7 @@ export function tryBreakBlock(localX, localY) {
 }
 
 export function tryPlaceBlock(localX, localY) {
+  const TILE_SIZE = GameConfig.world.tileSize;
   const selectedItemKey = getSelectedItemKey();
   const selectedItem = getSelectedItemDef();
   const worldPos = localToWorld(localX, localY);
@@ -382,6 +395,8 @@ export function tryPlaceBlock(localX, localY) {
 }
 
 export function damageBlock(tx, ty) {
+  const TILE_SIZE = GameConfig.world.tileSize;
+  const HIT_COOLDOWN = GameConfig.timings.hitCooldown;
   const selectedItem = getSelectedItemDef();
   if (!selectedItem.usableForBreaking) return false;
 
@@ -402,20 +417,20 @@ export function damageBlock(tx, ty) {
   miningState.mineCooldownRemaining = HIT_COOLDOWN;
 
   const impactPoint = { x: tx * TILE_SIZE + TILE_SIZE / 2, y: ty * TILE_SIZE + TILE_SIZE / 2 };
-  const particleColor = tile === 4 ? '#9aa3ad' : tile === 5 ? '#ff8c4a' : tile === 3 ? '#5bc96e' : '#b37a45';
+  const particleColor = blockDef.color || '#b37a45';
   spawnParticles(impactPoint.x, impactPoint.y, particleColor, 5, 25, 70, 0.12, 0.22, 2, 4);
 
   if (state.currentDamage >= state.totalDurability) {
-    if (tile === 4) playSound('rockBreak');
-    else if (tile === 1 || tile === 3) playSound('dirtBreak');
+    if (blockDef.soundGroup === 'rock') playSound('rockBreak');
+    else if (blockDef.soundGroup === 'dirt') playSound('dirtBreak');
 
     clearBlockDamageState(tx, ty);
     setTile(tx, ty, 0);
     applyBlockDrops(tile, tx, ty);
-    spawnParticles(impactPoint.x, impactPoint.y, tile === 4 ? '#8b949e' : tile === 5 ? '#ff6b2c' : tile === 3 ? '#46b95b' : '#9b6b3d', 14, 45, 120, 0.2, 0.4, 3, 6);
+    spawnParticles(impactPoint.x, impactPoint.y, blockDef.color || '#9b6b3d', 14, 45, 120, 0.2, 0.4, 3, 6);
   } else {
-    if (tile === 4) playSound('rockHit');
-    else if (tile === 1 || tile === 3) playSound('dirtHit');
+    if (blockDef.soundGroup === 'rock') playSound('rockHit');
+    else if (blockDef.soundGroup === 'dirt') playSound('dirtHit');
     worldState.version++;
   }
 
@@ -425,6 +440,7 @@ export function damageBlock(tx, ty) {
 
 // ─── Hand animation ──────────────────────────────────────────────────────
 export function startHandStrike(tx, ty, didHit = true) {
+  const HIT_COOLDOWN = GameConfig.timings.hitCooldown;
   miningState.handAnimation = {
     tx, ty, didHit,
     facing: playerState.facing,
@@ -434,6 +450,8 @@ export function startHandStrike(tx, ty, didHit = true) {
 }
 
 export function startAirPunch() {
+  const TILE_SIZE = GameConfig.world.tileSize;
+  const HIT_COOLDOWN = GameConfig.timings.hitCooldown;
   const playerCenterX = playerState.x + playerState.width / 2;
   const playerCenterY = playerState.y + playerState.height * 0.45;
   const reach = TILE_SIZE * 1.5;
@@ -452,6 +470,7 @@ function updateHandAnimation(dt) {
 
 // ─── Punch action (used by touch punch button / hold-to-punch) ─────────────
 export function tryPunchAction() {
+  const TILE_SIZE = GameConfig.world.tileSize;
   const dir = playerState.facing;
   const originX = playerState.x + playerState.width / 2;
   const playerCenterY = playerState.y + playerState.height * 0.5;
@@ -479,6 +498,7 @@ export function tryPunchAction() {
 
 // ─── Main world tick ────────────────────────────────────────────────────────
 export function updateWorld(dt) {
+  const DAMAGE_RESET_DELAY = GameConfig.timings.damageResetDelay;
   miningState.mineCooldownRemaining = Math.max(0, miningState.mineCooldownRemaining - dt);
 
   if (getPunchHeld() && miningState.mineCooldownRemaining <= 0) tryPunchAction();

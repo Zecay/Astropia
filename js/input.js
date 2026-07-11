@@ -7,7 +7,7 @@
 // via the callbacks wired up in main.js through `configureInput`.
 
 import { clamp, clientToLocal } from './utils.js';
-import { MIN_ZOOM, MAX_ZOOM, ZOOM_STEP, QUICK_SLOT_COUNT } from './constants.js';
+import { GameConfig } from './config.js';
 import {
   canvas, leftBtn, rightBtn, jumpBtn, punchBtn, saveQuitBtn,
   chatInput, usernameInput
@@ -81,10 +81,11 @@ export function setupInput() {
     if (e.code === 'KeyA'  || e.code === 'ArrowLeft')  Input.left  = true;
     if (e.code === 'KeyD'  || e.code === 'ArrowRight') Input.right = true;
     if (e.code === 'Space') { if (!Input.jump) Input.jumpJustPressed = true; Input.jump = true; }
-    for (let i = 1; i <= QUICK_SLOT_COUNT; i++)
+    const { minZoom, maxZoom, zoomStep } = GameConfig.world;
+    for (let i = 1; i <= GameConfig.inventory.quickSlotCount; i++)
       if (e.code === `Digit${i}` || e.code === `Numpad${i}`) { hooks.setSelectedSlot(i - 1); break; }
-    if (e.code === 'Equal'  || e.code === 'NumpadAdd')      cameraState.targetZoom = clamp(cameraState.targetZoom + ZOOM_STEP, MIN_ZOOM, MAX_ZOOM);
-    if (e.code === 'Minus'  || e.code === 'NumpadSubtract') cameraState.targetZoom = clamp(cameraState.targetZoom - ZOOM_STEP, MIN_ZOOM, MAX_ZOOM);
+    if (e.code === 'Equal'  || e.code === 'NumpadAdd')      cameraState.targetZoom = clamp(cameraState.targetZoom + zoomStep, minZoom, maxZoom);
+    if (e.code === 'Minus'  || e.code === 'NumpadSubtract') cameraState.targetZoom = clamp(cameraState.targetZoom - zoomStep, minZoom, maxZoom);
   });
   window.addEventListener('keyup', (e) => {
     if (hooks.isTypingChat()) return;
@@ -100,7 +101,8 @@ export function setupInput() {
   canvas.addEventListener('dblclick',    (e) => e.preventDefault());
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
-    cameraState.targetZoom = clamp(cameraState.targetZoom + (e.deltaY > 0 ? -1 : 1) * ZOOM_STEP, MIN_ZOOM, MAX_ZOOM);
+    const { minZoom, maxZoom, zoomStep } = GameConfig.world;
+    cameraState.targetZoom = clamp(cameraState.targetZoom + (e.deltaY > 0 ? -1 : 1) * zoomStep, minZoom, maxZoom);
   }, { passive: false });
 
   canvas.addEventListener('mousedown', (e) => {

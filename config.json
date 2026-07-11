@@ -1,0 +1,301 @@
+{
+  "physics": {
+    "walkSpeed": 200,
+    "walkAccel": 5000,
+    "friction": 659,
+    "jumpVel": -640,
+    "gravityHold": 1600,
+    "gravityNormal": 2400,
+    "maxFallSpeed": 800,
+    "gravityCancel": 12000
+  },
+
+  "world": {
+    "tileSize": 32,
+    "worldWidth": 80,
+    "worldHeight": 64,
+    "groundRow": 20,
+    "minZoom": 0.6,
+    "maxZoom": 2.5,
+    "zoomStep": 0.1,
+    "fixedDt": 0.016666666666666666
+  },
+
+  "player": {
+    "sizeX": 24,
+    "sizeY": 24,
+    "color": "#3f7cff"
+  },
+
+  "timings": {
+    "hitCooldown": 0.2,
+    "damageResetDelay": 10,
+    "chatBubbleMs": 8000,
+    "chatLogMs": 15000,
+    "networkIntervalMs": 70,
+    "saveIntervalSec": 30
+  },
+
+  "inventory": {
+    "quickSlotCount": 4,
+    "panelSlots": 12,
+    "panelMaxWidth": 320
+  },
+
+  "network": {
+    "serverUrlBase64": "aHR0cHM6Ly90ZXN0aW5nYWdhaW5sb2wtbWF1dmUudmVyY2VsLmFwcC9hcGkvc3luYw=="
+  },
+
+  "sounds": {
+    "seedPlant": "https://lqy3lriiybxcejon.public.blob.vercel-storage.com/ac9622f7-f356-4f99-86be-bba5a9c0d0bd/seed-plant-qLMRJFq4NC-pYv6PesC4KMz7lzR8JiMEO4LPsyMml.mp3?LQQA",
+    "dirtHit": "https://lqy3lriiybxcejon.public.blob.vercel-storage.com/ac9622f7-f356-4f99-86be-bba5a9c0d0bd/dirt-hit-5690kHauZf-HP1onfBIkHrko86XLDxJTaStvGqoBk.mp3?P70Y",
+    "dirtBreak": "https://lqy3lriiybxcejon.public.blob.vercel-storage.com/ac9622f7-f356-4f99-86be-bba5a9c0d0bd/dirt-break-qDrwpcnT2P-Eh3AU64RXbGIaRKkmkfGsY852chJCX.mp3?Sot2",
+    "rockHit": "https://lqy3lriiybxcejon.public.blob.vercel-storage.com/ac9622f7-f356-4f99-86be-bba5a9c0d0bd/rock-hit-UspaWtp6nP-4s3TA7A8I8hTB4YnRwV7TtJUYLVbRX.mp3?Zr6R",
+    "rockBreak": "https://lqy3lriiybxcejon.public.blob.vercel-storage.com/ac9622f7-f356-4f99-86be-bba5a9c0d0bd/rock-break-9UlvUJ3HCn-6SNLEjZBhgXuio54lOzkIPeygSel3F.mp3?QxCN"
+  },
+
+  "visuals": {
+    "sky": { "top": "#87d5ff", "bottom": "#e7f7ff" },
+
+    "ui": {
+      "panelBg": "#1a2b3c",
+      "panelBg2": "#16222e",
+      "panelBorder": "#8cc7ff",
+      "accent": "#7ed957",
+      "accentDark": "#347a2a",
+      "slotBg": "rgba(26, 43, 60, 0.92)",
+      "slotBorder": "#8cc7ff",
+      "slotSelected": "#ffd166",
+      "textColor": "#eaf6ff",
+      "hudBg": "rgba(10, 20, 32, 0.65)"
+    },
+
+    "tileset": {
+      "src": "assets/tileset.png",
+      "cellSize": 32,
+      "columns": 8,
+      "rows": 2
+    },
+
+    "playerSprite": { "col": 0, "row": 1 },
+
+    "defaultSeedSprites": {
+      "sprout": { "col": 1, "row": 1 },
+      "stem":   { "col": 2, "row": 1 },
+      "mature": { "col": 3, "row": 1 }
+    }
+  },
+
+  "blocks": {
+    "1": {
+      "id": 1, "name": "Dirt", "durability": 3, "breakable": true, "placeable": true,
+      "inventoryKey": "dirt_block", "color": "#9b6b3d", "border": "#7a522d", "soundGroup": "dirt",
+      "sprite": { "col": 0, "row": 0 },
+      "dropTable": [
+        { "itemKey": "seed", "chance": 0.5, "quantity": 1 },
+        { "itemKey": "dirt_block", "chance": 0.1, "quantity": 1 }
+      ]
+    },
+    "2": {
+      "id": 2, "name": "Bedrock", "durability": 0, "breakable": false, "placeable": false,
+      "inventoryKey": null, "color": "#111111", "border": "#2f2f2f", "soundGroup": null,
+      "sprite": { "col": 1, "row": 0 },
+      "dropTable": []
+    },
+    "3": {
+      "id": 3, "name": "Terrain Grass", "durability": 3, "breakable": true, "placeable": true,
+      "inventoryKey": "dirt_block", "terrainLayer": true, "color": "#46b95b", "border": "#2f8c42", "soundGroup": "dirt",
+      "sprite": { "col": 2, "row": 0 },
+      "dropTable": [
+        { "itemKey": "seed", "chance": 0.5, "quantity": 1 },
+        { "itemKey": "dirt_block", "chance": 0.1, "quantity": 1 }
+      ]
+    },
+    "4": {
+      "id": 4, "name": "Rock", "durability": 7, "breakable": true, "placeable": true,
+      "inventoryKey": "rock_block", "color": "#8b949e", "border": "#69727c", "soundGroup": "rock",
+      "sprite": { "col": 3, "row": 0 },
+      "dropTable": [
+        { "itemKey": "rock_seed", "chance": 0.35, "quantity": 1 },
+        { "itemKey": "rock_block", "chance": 0.15, "quantity": 1 }
+      ]
+    },
+    "5": {
+      "id": 5, "name": "Lava", "durability": 8, "breakable": true, "placeable": true,
+      "inventoryKey": "lava_block", "color": "#ff6b2c", "border": "#c74312", "soundGroup": null,
+      "sprite": { "col": 4, "row": 0 },
+      "dropTable": [
+        { "itemKey": "lava_seed", "chance": 0.25, "quantity": 1 },
+        { "itemKey": "lava_block", "chance": 0.1, "quantity": 1 }
+      ]
+    },
+    "6": {
+      "id": 6, "name": "Grass Block", "durability": 4, "breakable": true, "placeable": true,
+      "inventoryKey": "grass_block", "color": "#55c963", "border": "#2f8c42", "soundGroup": "dirt",
+      "sprite": { "col": 5, "row": 0 },
+      "dropTable": [
+        { "itemKey": "grass_seed", "chance": 0.55, "quantity": 1 },
+        { "itemKey": "grass_block", "chance": 0.15, "quantity": 1 }
+      ]
+    },
+    "7": {
+      "id": 7, "name": "Stone Block", "durability": 10, "breakable": true, "placeable": true,
+      "inventoryKey": "stone_block", "color": "#9e9ea8", "border": "#64646e", "soundGroup": "rock",
+      "sprite": { "col": 6, "row": 0 },
+      "dropTable": [
+        { "itemKey": "stone_seed", "chance": 0.65, "quantity": 1 },
+        { "itemKey": "stone_block", "chance": 0.2, "quantity": 1 }
+      ]
+    },
+    "8": {
+      "id": 8, "name": "Obsidian Block", "durability": 16, "breakable": true, "placeable": true,
+      "inventoryKey": "obsidian_block", "color": "#28143c", "border": "#140823", "soundGroup": "rock",
+      "sprite": { "col": 7, "row": 0 },
+      "dropTable": [
+        { "itemKey": "obsidian_seed", "chance": 0.45, "quantity": 1 },
+        { "itemKey": "obsidian_block", "chance": 0.12, "quantity": 1 }
+      ]
+    }
+  },
+
+  "items": {
+    "hand":           { "key": "hand",           "name": "Punch",           "type": "tool",  "placeableTile": null, "usableForBreaking": true,  "blockId": null },
+    "seed":           { "key": "seed",           "name": "Dirt Seed",      "type": "seed",  "placeableTile": null, "usableForBreaking": false, "seedType": "dirt" },
+    "rock_seed":      { "key": "rock_seed",      "name": "Rock Seed",      "type": "seed",  "placeableTile": null, "usableForBreaking": false, "seedType": "rock" },
+    "lava_seed":      { "key": "lava_seed",      "name": "Lava Seed",      "type": "seed",  "placeableTile": null, "usableForBreaking": false, "seedType": "lava" },
+    "grass_seed":     { "key": "grass_seed",     "name": "Grass Seed",     "type": "seed",  "placeableTile": null, "usableForBreaking": false, "seedType": "grass" },
+    "stone_seed":     { "key": "stone_seed",     "name": "Stone Seed",     "type": "seed",  "placeableTile": null, "usableForBreaking": false, "seedType": "stone" },
+    "obsidian_seed":  { "key": "obsidian_seed",  "name": "Obsidian Seed",  "type": "seed",  "placeableTile": null, "usableForBreaking": false, "seedType": "obsidian" },
+    "dirt_block":     { "key": "dirt_block",     "name": "Dirt Block",     "type": "block", "placeableTile": 1,    "usableForBreaking": false, "blockId": 1 },
+    "rock_block":     { "key": "rock_block",     "name": "Rock Block",     "type": "block", "placeableTile": 4,    "usableForBreaking": false, "blockId": 4 },
+    "lava_block":     { "key": "lava_block",     "name": "Lava Block",     "type": "block", "placeableTile": 5,    "usableForBreaking": false, "blockId": 5 },
+    "grass_block":    { "key": "grass_block",    "name": "Grass Block",    "type": "block", "placeableTile": 6,    "usableForBreaking": false, "blockId": 6 },
+    "stone_block":    { "key": "stone_block",    "name": "Stone Block",    "type": "block", "placeableTile": 7,    "usableForBreaking": false, "blockId": 7 },
+    "obsidian_block": { "key": "obsidian_block", "name": "Obsidian Block", "type": "block", "placeableTile": 8,    "usableForBreaking": false, "blockId": 8 }
+  },
+
+  "seeds": {
+    "dirt": {
+      "type": "dirt", "itemKey": "seed", "displayName": "Dirt Seed",
+      "growthTime": 10, "immatureHits": 6,
+      "stemColor": "#4f8f2b", "bloomColor": "#7ed957",
+      "blockRewardKey": "dirt_block",
+      "seedReturnTable": [
+        { "quantity": 1, "chance": 0.7 },
+        { "quantity": 2, "chance": 0.3 },
+        { "quantity": 3, "chance": 0.1 }
+      ],
+      "blockYieldTable": [
+        { "quantity": 1, "chance": 1.0 },
+        { "quantity": 2, "chance": 0.9 },
+        { "quantity": 3, "chance": 0.7 },
+        { "quantity": 4, "chance": 0.5 },
+        { "quantity": 5, "chance": 0.3 },
+        { "quantity": 6, "chance": 0.1 }
+      ]
+    },
+    "rock": {
+      "type": "rock", "itemKey": "rock_seed", "displayName": "Rock Seed",
+      "growthTime": 20, "immatureHits": 8,
+      "stemColor": "#6d7680", "bloomColor": "#aeb7c2",
+      "blockRewardKey": "rock_block",
+      "seedReturnTable": [
+        { "quantity": 1, "chance": 0.6 },
+        { "quantity": 2, "chance": 0.2 },
+        { "quantity": 3, "chance": 0.05 }
+      ],
+      "blockYieldTable": [
+        { "quantity": 1, "chance": 1.0 },
+        { "quantity": 2, "chance": 0.65 },
+        { "quantity": 3, "chance": 0.35 },
+        { "quantity": 4, "chance": 0.15 }
+      ]
+    },
+    "lava": {
+      "type": "lava", "itemKey": "lava_seed", "displayName": "Lava Seed",
+      "growthTime": 45, "immatureHits": 12,
+      "stemColor": "#ff6b2c", "bloomColor": "#ffb347",
+      "blockRewardKey": "lava_block",
+      "seedReturnTable": [
+        { "quantity": 1, "chance": 0.5 },
+        { "quantity": 2, "chance": 0.15 }
+      ],
+      "blockYieldTable": [
+        { "quantity": 1, "chance": 1.0 },
+        { "quantity": 2, "chance": 0.4 }
+      ]
+    },
+    "grass": {
+      "type": "grass", "itemKey": "grass_seed", "displayName": "Grass Seed",
+      "growthTime": 30, "immatureHits": 10,
+      "stemColor": "#3f9f52", "bloomColor": "#7dde6a",
+      "blockRewardKey": "grass_block",
+      "notes": "Combo seed: Dirt Seed + Rock Seed -> Grass Seed.",
+      "seedReturnTable": [
+        { "quantity": 1, "chance": 0.9 },
+        { "quantity": 2, "chance": 0.3 },
+        { "quantity": 3, "chance": 0.05 }
+      ],
+      "blockYieldTable": [
+        { "quantity": 1, "chance": 1.0 },
+        { "quantity": 2, "chance": 0.75 },
+        { "quantity": 3, "chance": 0.5 },
+        { "quantity": 4, "chance": 0.35 },
+        { "quantity": 5, "chance": 0.15 }
+      ]
+    },
+    "stone": {
+      "type": "stone", "itemKey": "stone_seed", "displayName": "Stone Seed",
+      "growthTime": 60, "immatureHits": 16,
+      "stemColor": "#7a7a84", "bloomColor": "#c7c7d1",
+      "blockRewardKey": "stone_block",
+      "notes": "Combo seed: Grass Seed + Rock Seed -> Stone Seed.",
+      "seedReturnTable": [
+        { "quantity": 1, "chance": 0.55 },
+        { "quantity": 2, "chance": 0.15 }
+      ],
+      "blockYieldTable": [
+        { "quantity": 1, "chance": 1.0 },
+        { "quantity": 2, "chance": 0.6 },
+        { "quantity": 3, "chance": 0.3 },
+        { "quantity": 4, "chance": 0.1 }
+      ]
+    },
+    "obsidian": {
+      "type": "obsidian", "itemKey": "obsidian_seed", "displayName": "Obsidian Seed",
+      "growthTime": 300, "immatureHits": 40,
+      "stemColor": "#3a1f5c", "bloomColor": "#8a4fd6",
+      "blockRewardKey": "obsidian_block",
+      "notes": "Combo seed: Stone Seed + Lava Seed -> Obsidian Seed. Very rare / slow.",
+      "seedReturnTable": [
+        { "quantity": 1, "chance": 0.4 }
+      ],
+      "blockYieldTable": [
+        { "quantity": 1, "chance": 1.0 },
+        { "quantity": 2, "chance": 0.45 },
+        { "quantity": 3, "chance": 0.2 }
+      ]
+    }
+  },
+
+  "seedCombinationRecipes": [
+    { "ingredients": ["dirt", "rock"], "result": "grass" },
+    { "ingredients": ["grass", "rock"], "result": "stone" },
+    { "ingredients": ["stone", "lava"], "result": "obsidian" }
+  ],
+
+  "scoreValues": {
+    "dirt_block": 1,
+    "rock_block": 3,
+    "lava_block": 5,
+    "grass_block": 8,
+    "stone_block": 14,
+    "obsidian_block": 40,
+    "seed": 2,
+    "rock_seed": 4,
+    "lava_seed": 6,
+    "grass_seed": 10,
+    "stone_seed": 18,
+    "obsidian_seed": 50
+  }
+}

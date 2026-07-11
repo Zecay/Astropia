@@ -2,9 +2,10 @@
 // Owns "how many items do I have" (inventoryState) as well as rendering the
 // HTML quick-slot bar / panel and all drag-and-drop wiring. Other modules
 // (world.js, seeds.js) call addInventoryItem/consumeInventoryItem instead of
-// touching inventoryState directly.
+// touching inventoryState directly. Item defs and slot counts come from
+// GameConfig (config.json).
 
-import { ITEM_DEFS, QUICK_SLOT_COUNT, INVENTORY_PANEL_SLOTS } from './constants.js';
+import { GameConfig } from './config.js';
 import { inventoryBar, inventoryPanelContents } from './dom.js';
 
 export const inventoryState = {
@@ -12,7 +13,7 @@ export const inventoryState = {
   selectedIndex: 0,
   items: new Map([['hand', { key: 'hand', quantity: 1 }]]),
   panelOpen: false,
-  panelSlots: new Array(INVENTORY_PANEL_SLOTS).fill(null),
+  panelSlots: [],
   dragItemKey: null,
   dragSourceSlot: null,
   dragSourceType: null,
@@ -25,18 +26,21 @@ export const inventoryState = {
   movedUiDuringDrag: false
 };
 
+function panelSlotCount() { return GameConfig.inventory.panelSlots; }
+function quickSlotCount() { return GameConfig.inventory.quickSlotCount; }
+
 export function resetInventory() {
-  inventoryState.quickSlots = ['hand', null, null, null];
+  inventoryState.quickSlots = ['hand', ...new Array(quickSlotCount() - 1).fill(null)];
   inventoryState.selectedIndex = 0;
   inventoryState.items = new Map([['hand', { key: 'hand', quantity: 1 }]]);
-  inventoryState.panelSlots = new Array(INVENTORY_PANEL_SLOTS).fill(null);
+  inventoryState.panelSlots = new Array(panelSlotCount()).fill(null);
   inventoryState.panelOpen = false;
   inventoryState.panelOpenAmount = 0;
 }
 
 // ─── Selectors ──────────────────────────────────────────────────────────────
 export function getSelectedItemKey() { return inventoryState.quickSlots[inventoryState.selectedIndex] || 'hand'; }
-export function getSelectedItemDef() { return ITEM_DEFS[getSelectedItemKey()] || ITEM_DEFS.hand; }
+export function getSelectedItemDef() { return GameConfig.items[getSelectedItemKey()] || GameConfig.items.hand; }
 export function getItemQuantity(itemKey) { return inventoryState.items.get(itemKey)?.quantity || 0; }
 
 // ─── Inventory management ───────────────────────────────────────────────────
@@ -56,14 +60,14 @@ function compactInventorySlots() {
     const k = inventoryState.quickSlots[i];
     if (k && getItemQuantity(k) <= 0) inventoryState.quickSlots[i] = null;
   }
-  for (let i = 0; i < INVENTORY_PANEL_SLOTS; i++) {
+  for (let i = 0; i < panelSlotCount(); i++) {
     const k = inventoryState.panelSlots[i];
     if (k && getItemQuantity(k) <= 0) inventoryState.panelSlots[i] = null;
   }
 }
 
 export function addInventoryItem(itemKey, quantity = 1) {
-  if (!ITEM_DEFS[itemKey] || quantity <= 0) return;
+  if (!GameConfig.items[itemKey] || quantity <= 0) return;
   const cur = inventoryState.items.get(itemKey);
   if (cur) cur.quantity += quantity;
   else inventoryState.items.set(itemKey, { key: itemKey, quantity });
@@ -92,22 +96,21 @@ export function setSelectedSlot(index) {
 
 // ─── UI rendering ───────────────────────────────────────────────────────────
 function createItemIcon(itemKey) {
-  const def = itemKey ? ITEM_DEFS[itemKey] : null;
+  const def = itemKey ? GameConfig.items[itemKey] : null;
   const d = document.createElement('div');
-  d.style.cssText = 'width:24px;height:24px;position:relative;flex:0 0 auto;';
+  d.className = 'itemIcon';
   if (itemKey === 'hand') {
     d.textContent = '✊';
-    d.style.cssText += 'display:flex;align-items:center;justify-content:center;font-size:18px;';
+    d.classList.add('itemIcon-hand');
   } else if (def && def.type === 'block') {
-    const colors = { 1:'#9b6b3d', 3:'#46b95b', 4:'#8b949e', 5:'#ff6b2c' };
-    const borders = { 1:'#7a522d', 3:'#2f8c42', 4:'#69727c', 5:'#c74312' };
-    d.style.background = colors[def.blockId] || '#9b6b3d';
-    d.style.border = `1px solid ${borders[def.blockId] || '#7a522d'}`;
+    const blockDef = GameConfig.blocksByTile[def.blockId];
+    d.classList.add('itemIcon-block');
+    d.style.background = blockDef?.color || '#9b6b3d';
+    d.style.borderColor = blockDef?.border || '#7a522d';
   } else if (def && def.type === 'seed') {
-    const colors = { rock:'#9aa3ad', lava:'#ff6b2c', dirt:'#7ac943', grass:'#55c963' };
-    d.style.background = colors[def.seedType] || '#7ac943';
-    d.style.borderRadius = '50%';
-    d.style.border = '1px solid rgba(0,0,0,0.25)';
+    const seedDef = GameConfig.seeds[def.seedType];
+    d.classList.add('itemIcon-seed');
+    d.style.background = seedDef?.bloomColor || '#7ac943';
   }
   return d;
 }
@@ -124,7 +127,7 @@ export function renderInventory() {
     slot.className = 'inventorySlot' + (index === inventoryState.selectedIndex ? ' selected' : '');
     slot.type = 'button';
     slot.dataset.slotIndex = String(index);
-    slot.title = itemKey ? (ITEM_DEFS[itemKey]?.name || itemKey) : 'Empty';
+    slot.title = itemKey ? (GameConfig.items[itemKey]?.name || itemKey) : 'Empty';
     if (itemKey) slot.appendChild(createItemIcon(itemKey));
     if (itemKey && itemKey !== 'hand') {
       const qty = document.createElement('div');
@@ -146,7 +149,7 @@ export function renderInventory() {
 
   inventoryPanelContents.innerHTML = '';
   const panelItems = getInventoryPanelItems();
-  for (let i = 0; i < INVENTORY_PANEL_SLOTS; i++) {
+  for (let i = 0; i < panelSlotCount(); i++) {
     const itemKey = panelItems[i]?.key || null;
     const entry = document.createElement('div');
     entry.className = 'inventoryPanelItem' + (itemKey && inventoryState.quickSlots[inventoryState.selectedIndex] === itemKey ? ' selected' : '');
@@ -158,7 +161,7 @@ export function renderInventory() {
       entry.addEventListener('dragend', () => { inventoryState.dragItemKey = null; inventoryState.dragSourceSlot = null; inventoryState.dragSourceType = null; entry.classList.remove('dragging'); });
       entry.addEventListener('dblclick', () => equipItemToSelectedQuickSlot(itemKey, i));
     } else {
-      entry.innerHTML = '<div style="opacity:0.25;font-size:18px;line-height:1;">□</div>';
+      entry.innerHTML = '<div class="itemIconEmpty">□</div>';
     }
     entry.addEventListener('dragover', (e) => { e.preventDefault(); entry.classList.add('dragOver'); });
     entry.addEventListener('dragleave', () => entry.classList.remove('dragOver'));
@@ -189,10 +192,10 @@ function handleQuickSlotDrop(targetIndex) {
 function equipItemToSelectedQuickSlot(itemKey, panelIndex) {
   if (!itemKey || itemKey === 'hand') return;
   let targetIndex = inventoryState.selectedIndex === 0 ? 1 : inventoryState.selectedIndex;
-  if (targetIndex <= 0 || targetIndex >= QUICK_SLOT_COUNT) return;
+  if (targetIndex <= 0 || targetIndex >= quickSlotCount()) return;
   const prev = inventoryState.quickSlots[targetIndex];
   inventoryState.quickSlots[targetIndex] = itemKey;
-  if (typeof panelIndex === 'number' && panelIndex >= 0 && panelIndex < INVENTORY_PANEL_SLOTS)
+  if (typeof panelIndex === 'number' && panelIndex >= 0 && panelIndex < panelSlotCount())
     inventoryState.panelSlots[panelIndex] = prev && prev !== 'hand' ? prev : null;
   inventoryState.quickSlots[0] = 'hand';
   renderInventory();

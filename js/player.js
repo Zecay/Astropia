@@ -1,23 +1,34 @@
 // ─── Player state & physics ────────────────────────────────────────────────
-import {
-  TILE_SIZE, PLAYER_SIZE_X, PLAYER_SIZE_Y, GROUND_ROW,
-  WALK_SPEED, WALK_ACCEL, GROUND_FRIC, AIR_FRIC,
-  JUMP_VEL, GRAVITY_HOLD, GRAVITY_NORMAL, MAX_FALL_SPEED, GRAVITY_CANCEL
-} from './constants.js';
+import { GameConfig } from './config.js';
 import { Input, consumeJumpJustPressed } from './input.js';
 import { getTile } from './world.js';
 
+// playerState is created with safe zero defaults; initPlayerFromConfig()
+// (called once after config loads, before the game loop starts) fills in the
+// real size/spawn position/color from GameConfig.
 export const playerState = {
-  x: 6 * TILE_SIZE, y: (GROUND_ROW - 3) * TILE_SIZE,
-  width: PLAYER_SIZE_X, height: PLAYER_SIZE_Y,
+  x: 0, y: 0,
+  width: 24, height: 24,
   vx: 0, vy: 0, onGround: false, facing: 1, color: '#3f7cff'
 };
+
+export function initPlayerFromConfig() {
+  const TILE_SIZE = GameConfig.world.tileSize;
+  const GROUND_ROW = GameConfig.world.groundRow;
+  playerState.width = GameConfig.player.sizeX;
+  playerState.height = GameConfig.player.sizeY;
+  playerState.color = GameConfig.player.color;
+  playerState.x = 6 * TILE_SIZE;
+  playerState.y = (GROUND_ROW - 3) * TILE_SIZE;
+}
 
 export function triggerHaptic() {
   if (navigator.vibrate) navigator.vibrate(15);
 }
 
 export function resetPlayer() {
+  const TILE_SIZE = GameConfig.world.tileSize;
+  const GROUND_ROW = GameConfig.world.groundRow;
   playerState.x = 6 * TILE_SIZE;
   playerState.y = Math.max(2 * TILE_SIZE, (GROUND_ROW - 5) * TILE_SIZE);
   playerState.vx = 0; playerState.vy = 0;
@@ -25,32 +36,33 @@ export function resetPlayer() {
 }
 
 export function updatePlayer(dt) {
+  const { walkSpeed, walkAccel, friction, jumpVel, gravityHold, gravityNormal, maxFallSpeed, gravityCancel } = GameConfig.physics;
+
   if (Input.left && !Input.right) {
     playerState.facing = -1;
-    playerState.vx -= WALK_ACCEL * dt;
-    if (playerState.vx < -WALK_SPEED) playerState.vx = -WALK_SPEED;
+    playerState.vx -= walkAccel * dt;
+    if (playerState.vx < -walkSpeed) playerState.vx = -walkSpeed;
   } else if (Input.right && !Input.left) {
     playerState.facing = 1;
-    playerState.vx += WALK_ACCEL * dt;
-    if (playerState.vx > WALK_SPEED) playerState.vx = WALK_SPEED;
+    playerState.vx += walkAccel * dt;
+    if (playerState.vx > walkSpeed) playerState.vx = walkSpeed;
   } else {
-    const friction = playerState.onGround ? GROUND_FRIC : AIR_FRIC;
     if (playerState.vx > 0) playerState.vx = Math.max(0, playerState.vx - friction * dt);
     else if (playerState.vx < 0) playerState.vx = Math.min(0, playerState.vx + friction * dt);
   }
 
   if (playerState.onGround && Input.jumpJustPressed) {
-    playerState.vy = JUMP_VEL;
+    playerState.vy = jumpVel;
     playerState.onGround = false;
     triggerHaptic();
   }
 
   let gravity;
-  if (playerState.vy < 0) gravity = Input.jump ? GRAVITY_HOLD : GRAVITY_CANCEL;
-  else gravity = GRAVITY_NORMAL;
+  if (playerState.vy < 0) gravity = Input.jump ? gravityHold : gravityCancel;
+  else gravity = gravityNormal;
 
   playerState.vy += gravity * dt;
-  playerState.vy = Math.min(playerState.vy, MAX_FALL_SPEED);
+  playerState.vy = Math.min(playerState.vy, maxFallSpeed);
 
   moveAndCollideX(playerState.vx * dt);
   moveAndCollideY(playerState.vy * dt);
@@ -58,6 +70,7 @@ export function updatePlayer(dt) {
 }
 
 export function moveAndCollideX(amount) {
+  const TILE_SIZE = GameConfig.world.tileSize;
   playerState.x += amount;
   if (amount > 0) {
     const right = playerState.x + playerState.width;
@@ -83,6 +96,7 @@ export function moveAndCollideX(amount) {
 }
 
 export function moveAndCollideY(amount) {
+  const TILE_SIZE = GameConfig.world.tileSize;
   playerState.onGround = false;
   const previousY = playerState.y;
   playerState.y += amount;

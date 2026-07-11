@@ -3,8 +3,12 @@
 // It talks to world.js to check for solid ground / clear damage state and to
 // spawn particles, and to inventory.js to hand out harvest rewards. It never
 // touches DOM or rendering directly.
+//
+// All seed data (growth times, combination recipes, colors) comes from
+// GameConfig (config.json) so designers can retune the "Grow" system without
+// touching this file.
 
-import { TILE_SIZE, SEED_DEFS, SEED_COMBINATION_RECIPES, HIT_COOLDOWN } from './constants.js';
+import { GameConfig } from './config.js';
 import { playerState } from './player.js';
 import {
   worldState, hasSolidSupport, clearBlockDamageState, spawnParticles,
@@ -25,19 +29,13 @@ function getSeedCombinationKey(seedTypeA, seedTypeB) {
   return [seedTypeA, seedTypeB].sort().join('+');
 }
 
-const SEED_COMBINATION_MAP = SEED_COMBINATION_RECIPES.reduce((map, recipe) => {
-  if (!recipe || !Array.isArray(recipe.ingredients) || recipe.ingredients.length !== 2 || !recipe.result) return map;
-  map.set(getSeedCombinationKey(recipe.ingredients[0], recipe.ingredients[1]), recipe.result);
-  return map;
-}, new Map());
-
 function getSeedCombinationResult(seedTypeA, seedTypeB) {
   if (!seedTypeA || !seedTypeB) return null;
-  return SEED_COMBINATION_MAP.get(getSeedCombinationKey(seedTypeA, seedTypeB)) || null;
+  return GameConfig.seedCombinationMap.get(getSeedCombinationKey(seedTypeA, seedTypeB)) || null;
 }
 
 export function createSeedInstance(seedType, tx, ty) {
-  const def = SEED_DEFS[seedType];
+  const def = GameConfig.seeds[seedType];
   if (!def) return null;
   return { seedType, tx, ty, growth: 0, hits: 0, growthTime: def.growthTime };
 }
@@ -50,7 +48,15 @@ export function spawnSeed(seedType, tx, ty) {
   return true;
 }
 
+// Robust seed-combination resolution: whenever an incoming seed type meets an
+// existing seed (directly on the same tile, or planted just above an
+// existing seed below it), we look up the recipe and — if one exists —
+// instantly replace both seeds with the combo result. This covers the
+// "plant Rock on top of an existing Dirt seed -> instantly becomes Grass"
+// requirement regardless of which seed was already there or which order they
+// were planted in (the recipe lookup is symmetric).
 export function resolveSeedInteraction(tx, ty, incomingSeedType) {
+  const TILE_SIZE = GameConfig.world.tileSize;
   if (!incomingSeedType) return { handled:false, combined:false, planted:false };
 
   const existingSeed = getSeedAt(tx, ty);
@@ -74,7 +80,7 @@ export function resolveSeedInteraction(tx, ty, incomingSeedType) {
 
     const spawnX = tx * TILE_SIZE + TILE_SIZE / 2;
     const spawnY = ty * TILE_SIZE + TILE_SIZE / 2;
-    const resultDef = SEED_DEFS[resultSeedType];
+    const resultDef = GameConfig.seeds[resultSeedType];
     console.log('[SeedCombo] combined seeds', {
       position: { x: tx, y: ty },
       incomingSeed: incomingSeedType,
@@ -111,7 +117,7 @@ export function resolveSeedInteraction(tx, ty, incomingSeedType) {
 
   const spawnX = tx * TILE_SIZE + TILE_SIZE / 2;
   const spawnY = (ty + 0.5) * TILE_SIZE;
-  const resultDef = SEED_DEFS[resultSeedType];
+  const resultDef = GameConfig.seeds[resultSeedType];
   console.log('[SeedCombo] combined stacked seeds', {
     targetPosition: { x: tx, y: ty },
     resultPosition: { x: tx, y: ty + 1 },
@@ -126,8 +132,18 @@ export function resolveSeedInteraction(tx, ty, incomingSeedType) {
 }
 
 export function isSeedMature(seed) {
-  const def = SEED_DEFS[seed.seedType];
+  const def = GameConfig.seeds[seed.seedType];
   return !!def && seed.growth >= def.growthTime;
+}
+
+// Which of the three visual growth stages ("sprout" | "stem" | "mature") a
+// seed should currently render as. Used by renderer.js to pick sprite crops.
+export function getSeedGrowthStage(seed) {
+  const def = GameConfig.seeds[seed.seedType];
+  if (!def) return 'sprout';
+  if (isSeedMature(seed)) return 'mature';
+  const pct = def.growthTime > 0 ? seed.growth / def.growthTime : 0;
+  return pct < 0.5 ? 'sprout' : 'stem';
 }
 
 function rollIndependentDrops(table, itemKey, x, y) {
@@ -137,7 +153,8 @@ function rollIndependentDrops(table, itemKey, x, y) {
 }
 
 export function harvestSeed(seed) {
-  const def = SEED_DEFS[seed.seedType];
+  const TILE_SIZE = GameConfig.world.tileSize;
+  const def = GameConfig.seeds[seed.seedType];
   if (!def) return false;
   const spawnX = seed.tx * TILE_SIZE + TILE_SIZE / 2;
   const spawnY = seed.ty * TILE_SIZE + TILE_SIZE / 2;
@@ -159,7 +176,8 @@ export function harvestSeed(seed) {
 }
 
 export function destroySeed(seed, shouldDropSeed) {
-  const def = SEED_DEFS[seed.seedType];
+  const TILE_SIZE = GameConfig.world.tileSize;
+  const def = GameConfig.seeds[seed.seedType];
   if (!def) return false;
   const spawnX = seed.tx * TILE_SIZE + TILE_SIZE / 2;
   const spawnY = seed.ty * TILE_SIZE + TILE_SIZE / 2;
@@ -176,7 +194,9 @@ export function resolveSeedSupportBreak(seed) {
 }
 
 export function damageSeed(seed) {
-  const def = SEED_DEFS[seed.seedType];
+  const TILE_SIZE = GameConfig.world.tileSize;
+  const HIT_COOLDOWN = GameConfig.timings.hitCooldown;
+  const def = GameConfig.seeds[seed.seedType];
   if (!def) return false;
   if (miningState.mineCooldownRemaining > 0) return false;
 
@@ -204,6 +224,7 @@ export function damageSeed(seed) {
 }
 
 export function isPlayerTouchingSeed(seed) {
+  const TILE_SIZE = GameConfig.world.tileSize;
   const sl = seed.tx * TILE_SIZE, st = seed.ty * TILE_SIZE;
   return !(sl + TILE_SIZE <= playerState.x || sl >= playerState.x + playerState.width ||
            st + TILE_SIZE <= playerState.y || st >= playerState.y + playerState.height);
@@ -211,7 +232,7 @@ export function isPlayerTouchingSeed(seed) {
 
 export function updateSeeds(dt) {
   for (const seed of plantedSeeds) {
-    const def = SEED_DEFS[seed.seedType];
+    const def = GameConfig.seeds[seed.seedType];
     if (!def) continue;
     seed.growth = Math.min(def.growthTime, seed.growth + dt);
   }

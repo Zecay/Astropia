@@ -1,11 +1,12 @@
 // ─── Camera ─────────────────────────────────────────────────────────────────
 import { canvas } from './dom.js';
-import { TILE_SIZE } from './constants.js';
+import { GameConfig } from './config.js';
 import { clamp } from './utils.js';
 
 export const cameraState = { x: 0, y: 0, zoom: 1, targetZoom: 1 };
 
 export function updateCamera(dt, playerState, worldState) {
+  const TILE_SIZE = GameConfig.world.tileSize;
   const targetX = playerState.x + playerState.width / 2;
   const targetY = playerState.y + playerState.height / 2;
   const follow = 1 - Math.pow(0.001, dt * 4.2);

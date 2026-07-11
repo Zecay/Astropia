@@ -1,8 +1,8 @@
 // ─── Sound effects ──────────────────────────────────────────────────────────
-// Small, self-contained module so world.js (block breaking) and the SDK mute
-// callback in main.js can both talk to a single place for audio playback.
+// Small, self-contained module for playback. Sound URLs come from
+// GameConfig.sounds (config.json) instead of a hardcoded constant.
 
-import { SOUND_URLS } from './constants.js';
+import { GameConfig } from './config.js';
 
 let isMuted = false;
 const audioCache = new Map();
@@ -13,10 +13,12 @@ export function setMuted(muted) {
 
 export function playSound(soundKey) {
   if (isMuted) return;
+  const url = GameConfig.sounds && GameConfig.sounds[soundKey];
+  if (!url) return;
   try {
     let audio = audioCache.get(soundKey);
     if (!audio) {
-      audio = new Audio(SOUND_URLS[soundKey]);
+      audio = new Audio(url);
       audio.preload = 'auto';
       audio.volume = 0.7;
       audioCache.set(soundKey, audio);

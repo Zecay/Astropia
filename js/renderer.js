@@ -2,18 +2,22 @@
 // Every function here that touches `ctx` lives in this module. The renderer
 // only *reads* state from world.js / player.js / seeds.js / camera.js /
 // network.js / inventory.js — it never mutates game state.
+//
+// Visual overhaul: tiles, the player, and seeds are now drawn from a single
+// tileset spritesheet (GameConfig.visuals.tileset) via drawSprite(), with a
+// colored-rect fallback while the image is still loading (or if it fails to
+// load) so the game never renders blank.
 
-import { TILE_SIZE, CHAT_BUBBLE_MS } from './constants.js';
+import { GameConfig } from './config.js';
 import { canvas, ctx, stats } from './dom.js';
 import { cameraState } from './camera.js';
 import { clamp, easeOutCubic } from './utils.js';
 import { playerState } from './player.js';
 import {
   worldState, blockDamage, getBlockKey, particles, droppedItems, miningState,
-  isWithinPunchRange
+  getBlockDef
 } from './world.js';
-import { plantedSeeds, isSeedMature, isPlayerTouchingSeed } from './seeds.js';
-import { SEED_DEFS, ITEM_DEFS } from './constants.js';
+import { plantedSeeds, isSeedMature, isPlayerTouchingSeed, getSeedGrowthStage } from './seeds.js';
 import { getSelectedItemKey, getSelectedItemDef, getItemQuantity } from './inventory.js';
 import { allPlayers, myId, myChat, myName, parseNetworkPayload } from './network.js';
 
@@ -22,12 +26,59 @@ import { allPlayers, myId, myChat, myName, parseNetworkPayload } from './network
 // of network.js.
 const remoteVisuals = {};
 
+// ─── Tileset loading ────────────────────────────────────────────────────────
+let tilesetImage = null;
+let tilesetReady = false;
+
+export function loadTileset() {
+  const cfg = GameConfig.visuals.tileset;
+  if (!cfg || !cfg.src) return;
+  const img = new Image();
+  img.onload = () => { tilesetReady = true; };
+  img.onerror = () => { tilesetReady = false; console.warn('[renderer] Failed to load tileset:', cfg.src); };
+  img.src = cfg.src;
+  tilesetImage = img;
+}
+
+// Draws a single cellSize x cellSize crop (col, row) from the tileset at
+// world position (x, y), scaled to (w, h) [defaults to tile size]. Falls
+// back to a flat colored square (fallbackColor/fallbackBorder) if the
+// spritesheet isn't loaded yet — so the renderer is always ready to switch
+// over to real art the moment the image finishes loading, with zero visual
+// gap in the meantime.
+export function drawSprite(col, row, x, y, w, h, fallbackColor, fallbackBorder) {
+  const tileCfg = GameConfig.visuals.tileset;
+  const cell = tileCfg.cellSize;
+  w = w || cell;
+  h = h || cell;
+
+  if (tilesetReady && tilesetImage) {
+    ctx.drawImage(
+      tilesetImage,
+      col * cell, row * cell, cell, cell,
+      x, y, w, h
+    );
+    return;
+  }
+
+  // Fallback: flat rect using the block/seed's configured color.
+  ctx.fillStyle = fallbackColor || '#9b6b3d';
+  ctx.fillRect(x, y, w, h);
+  if (fallbackBorder) {
+    ctx.strokeStyle = fallbackBorder;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+  }
+}
+
 export function draw() {
+  const TILE_SIZE = GameConfig.world.tileSize;
+  const skyCfg = GameConfig.visuals.sky;
   const vw = canvas.width / devicePixelRatio;
   const vh = canvas.height / devicePixelRatio;
   ctx.clearRect(0, 0, vw, vh);
   const sky = ctx.createLinearGradient(0, 0, 0, vh);
-  sky.addColorStop(0, '#87d5ff'); sky.addColorStop(1, '#e7f7ff');
+  sky.addColorStop(0, skyCfg.top); sky.addColorStop(1, skyCfg.bottom);
   ctx.fillStyle = sky; ctx.fillRect(0, 0, vw, vh);
 
   ctx.save();
@@ -52,6 +103,7 @@ export function draw() {
 }
 
 function drawWorld() {
+  const TILE_SIZE = GameConfig.world.tileSize;
   const left   = Math.floor((cameraState.x - canvas.width  / devicePixelRatio / (2 * cameraState.zoom)) / TILE_SIZE) - 1;
   const right  = Math.ceil( (cameraState.x + canvas.width  / devicePixelRatio / (2 * cameraState.zoom)) / TILE_SIZE) + 1;
   const top    = Math.floor((cameraState.y - canvas.height / devicePixelRatio / (2 * cameraState.zoom)) / TILE_SIZE) - 1;
@@ -61,15 +113,17 @@ function drawWorld() {
     for (let x = left; x <= right; x++) {
       const tile = getTileForRender(x, y);
       if (tile === 0) continue;
+      const def = getBlockDef(tile);
+      if (!def) continue;
       const px = x * TILE_SIZE, py = y * TILE_SIZE;
-      switch (tile) {
-        case 2: ctx.fillStyle='#111111'; ctx.strokeStyle='#2f2f2f'; break;
-        case 3: ctx.fillStyle='#46b95b'; ctx.strokeStyle='#2f8c42'; break;
-        case 4: ctx.fillStyle='#8b949e'; ctx.strokeStyle='#69727c'; break;
-        case 5: ctx.fillStyle='#ff6b2c'; ctx.strokeStyle='#c74312'; break;
-        default: ctx.fillStyle='#9b6b3d'; ctx.strokeStyle='#7a522d';
+      const sprite = def.sprite;
+      if (sprite) {
+        drawSprite(sprite.col, sprite.row, px, py, TILE_SIZE, TILE_SIZE, def.color, def.border);
+      } else {
+        ctx.fillStyle = def.color || '#9b6b3d';
+        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
       }
-      ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+      ctx.strokeStyle = def.border || '#7a522d';
       ctx.lineWidth = 1;
       ctx.strokeRect(px + 0.5, py + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
       drawBlockCracks(x, y, px, py);
@@ -110,26 +164,42 @@ function drawBlockCracks(tx, ty, px, py) {
   ctx.restore();
 }
 
+// Seeds now render in three visual stages driven by growthPct: Sprout ->
+// Stem -> Mature, using different sprite crops from the tileset per stage
+// (falling back to the old procedural stem+bloom drawing if the tileset
+// isn't loaded yet).
 function drawSeeds() {
+  const TILE_SIZE = GameConfig.world.tileSize;
+  const stageSprites = GameConfig.visuals.defaultSeedSprites;
   for (const seed of plantedSeeds) {
-    const def = SEED_DEFS[seed.seedType];
+    const def = GameConfig.seeds[seed.seedType];
     if (!def) continue;
     const growthPct = clamp(seed.growth / def.growthTime, 0, 1);
     const baseX = seed.tx * TILE_SIZE + TILE_SIZE / 2;
     const baseY = seed.ty * TILE_SIZE + TILE_SIZE - 3;
-    const stemHeight = 5 + growthPct * 18;
-    const bloomSize  = 3 + growthPct * 7;
+    const stage = getSeedGrowthStage(seed); // 'sprout' | 'stem' | 'mature'
 
     ctx.save();
-    ctx.strokeStyle = def.stemColor; ctx.lineWidth = 3; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(baseX, baseY); ctx.lineTo(baseX, baseY - stemHeight); ctx.stroke();
-    ctx.fillStyle = def.bloomColor;
-    ctx.globalAlpha = 0.5 + growthPct * 0.5;
-    ctx.beginPath(); ctx.arc(baseX, baseY - stemHeight, bloomSize, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 1;
+
+    const spriteCrop = stageSprites && stageSprites[stage];
+    if (spriteCrop) {
+      const spriteSize = TILE_SIZE;
+      drawSprite(spriteCrop.col, spriteCrop.row, baseX - spriteSize / 2, baseY - spriteSize + 3, spriteSize, spriteSize, def.stemColor, null);
+    } else {
+      // Procedural fallback: stem + bloom.
+      const stemHeight = 5 + growthPct * 18;
+      const bloomSize  = 3 + growthPct * 7;
+      ctx.strokeStyle = def.stemColor; ctx.lineWidth = 3; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(baseX, baseY); ctx.lineTo(baseX, baseY - stemHeight); ctx.stroke();
+      ctx.fillStyle = def.bloomColor;
+      ctx.globalAlpha = 0.5 + growthPct * 0.5;
+      ctx.beginPath(); ctx.arc(baseX, baseY - stemHeight, bloomSize, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
     if (isSeedMature(seed)) {
       ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(baseX, baseY - stemHeight, bloomSize + 2, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(baseX, baseY - TILE_SIZE * 0.55, TILE_SIZE * 0.34, 0, Math.PI * 2); ctx.stroke();
     }
     drawBlockCracks(seed.tx, seed.ty, seed.tx * TILE_SIZE, seed.ty * TILE_SIZE);
     ctx.restore();
@@ -137,17 +207,21 @@ function drawSeeds() {
 }
 
 function drawSeedTouchUI() {
+  const TILE_SIZE = GameConfig.world.tileSize;
+  const ui = GameConfig.visuals.ui;
   const seed = plantedSeeds.find(e => isPlayerTouchingSeed(e));
   if (!seed) return;
-  const def = SEED_DEFS[seed.seedType];
+  const def = GameConfig.seeds[seed.seedType];
   if (!def) return;
   const remaining = Math.max(0, Math.ceil(def.growthTime - seed.growth));
   const bw = 94, bh = 34;
   const bx = seed.tx * TILE_SIZE + TILE_SIZE / 2 - bw / 2;
   const by = seed.ty * TILE_SIZE - 42;
   ctx.save();
-  ctx.fillStyle = '#7ed957'; ctx.strokeStyle = '#347a2a'; ctx.lineWidth = 2;
-  ctx.fillRect(bx, by, bw, bh); ctx.strokeRect(bx+0.5, by+0.5, bw-1, bh-1);
+  ctx.fillStyle = ui.accent; ctx.strokeStyle = ui.accentDark; ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, 6);
+  ctx.fill(); ctx.stroke();
   ctx.fillStyle = '#17324d'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center';
   ctx.fillText(def.displayName, bx + bw/2, by + 13);
   ctx.font = '10px Arial'; ctx.fillText(`${remaining}s left`, bx + bw/2, by + 26);
@@ -156,7 +230,7 @@ function drawSeedTouchUI() {
 
 function drawDroppedItems() {
   for (const item of droppedItems) {
-    const def = ITEM_DEFS[item.itemKey];
+    const def = GameConfig.items[item.itemKey];
     if (!def) continue;
     const bobOffset = Math.sin(item.bob) * 2;
     const drawX = item.x;
@@ -164,22 +238,18 @@ function drawDroppedItems() {
 
     ctx.save();
     if (def.type === 'seed') {
-      const seedColors  = { rock:'#9aa3ad', lava:'#ff6b2c', dirt:'#7ac943', grass:'#55c963' };
-      const seedStrokes = { rock:'#6d7680', lava:'#c74312', dirt:'#4d8f24', grass:'#2f8c42' };
-      const sType = def.seedType || 'dirt';
-      ctx.fillStyle   = seedColors[sType]  || '#7ac943';
-      ctx.strokeStyle = seedStrokes[sType] || '#4d8f24';
+      const seedDef = GameConfig.seeds[def.seedType];
+      ctx.fillStyle   = seedDef?.bloomColor  || '#7ac943';
+      ctx.strokeStyle = seedDef?.stemColor || '#4d8f24';
       ctx.beginPath();
       ctx.ellipse(drawX, drawY, 4, 6, -0.4, 0, Math.PI * 2);
       ctx.fill();
       ctx.lineWidth = 1;
       ctx.stroke();
     } else if (def.type === 'block') {
-      const blockColors  = { 1:'#9b6b3d', 3:'#46b95b', 4:'#8b949e', 5:'#ff6b2c' };
-      const blockStrokes = { 1:'#7a522d', 3:'#2f8c42', 4:'#69727c', 5:'#c74312' };
-      const bid = def.blockId || 1;
-      ctx.fillStyle   = blockColors[bid]  || '#9b6b3d';
-      ctx.strokeStyle = blockStrokes[bid] || '#7a522d';
+      const blockDef = GameConfig.blocksByTile[def.blockId];
+      ctx.fillStyle   = blockDef?.color  || '#9b6b3d';
+      ctx.strokeStyle = blockDef?.border || '#7a522d';
       ctx.lineWidth = 1;
       ctx.fillRect(  drawX - 6, drawY - 6, 12, 12);
       ctx.strokeRect(drawX - 5.5, drawY - 5.5, 11, 11);
@@ -189,6 +259,7 @@ function drawDroppedItems() {
 }
 
 function drawInteractionHand() {
+  const TILE_SIZE = GameConfig.world.tileSize;
   const handAnimation = miningState.handAnimation;
   if (!handAnimation) return;
   const pcx = playerState.x + playerState.width / 2;
@@ -233,12 +304,19 @@ function drawParticles() {
   ctx.globalAlpha = 1;
 }
 
+// Player is now drawn as a sprite (with a colored-rect fallback while the
+// tileset image loads), instead of a plain fillRect square.
 function drawPlayer() {
-  ctx.fillStyle = playerState.color;
-  ctx.fillRect(playerState.x, playerState.y, playerState.width, playerState.height);
-  ctx.strokeStyle = '#1c4fd6';
-  ctx.strokeRect(playerState.x+0.5, playerState.y+0.5, playerState.width-1, playerState.height-1);
-  const activeChat = myChat.text && Date.now() - myChat.t < CHAT_BUBBLE_MS ? myChat.text : '';
+  const spriteCfg = GameConfig.visuals.playerSprite;
+  if (spriteCfg) {
+    drawSprite(spriteCfg.col, spriteCfg.row, playerState.x, playerState.y, playerState.width, playerState.height, playerState.color, '#1c4fd6');
+  } else {
+    ctx.fillStyle = playerState.color;
+    ctx.fillRect(playerState.x, playerState.y, playerState.width, playerState.height);
+    ctx.strokeStyle = '#1c4fd6';
+    ctx.strokeRect(playerState.x+0.5, playerState.y+0.5, playerState.width-1, playerState.height-1);
+  }
+  const activeChat = myChat.text && Date.now() - myChat.t < GameConfig.timings.chatBubbleMs ? myChat.text : '';
   drawTextBubble(playerState.x + playerState.width / 2, playerState.y - 7, (myName || 'You') + ' (You)', activeChat, true);
 }
 
@@ -280,6 +358,7 @@ function drawTextBubble(worldX, worldY, title, chat, isLocal) {
 }
 
 function drawRemotePlayers() {
+  const spriteCfg = GameConfig.visuals.playerSprite;
   const now = Date.now();
   for (const id in allPlayers) {
     if (id === myId) continue;
@@ -290,12 +369,16 @@ function drawRemotePlayers() {
     remoteVisuals[id].y += (p.y - remoteVisuals[id].y) * 0.35;
     const packet = parseNetworkPayload(p, id);
     ctx.save();
-    ctx.fillStyle = '#ff8f3f';
-    ctx.fillRect(remoteVisuals[id].x, remoteVisuals[id].y, playerState.width, playerState.height);
-    ctx.strokeStyle = '#bd5218';
-    ctx.strokeRect(remoteVisuals[id].x + 0.5, remoteVisuals[id].y + 0.5, playerState.width - 1, playerState.height - 1);
+    if (spriteCfg) {
+      drawSprite(spriteCfg.col, spriteCfg.row, remoteVisuals[id].x, remoteVisuals[id].y, playerState.width, playerState.height, '#ff8f3f', '#bd5218');
+    } else {
+      ctx.fillStyle = '#ff8f3f';
+      ctx.fillRect(remoteVisuals[id].x, remoteVisuals[id].y, playerState.width, playerState.height);
+      ctx.strokeStyle = '#bd5218';
+      ctx.strokeRect(remoteVisuals[id].x + 0.5, remoteVisuals[id].y + 0.5, playerState.width - 1, playerState.height - 1);
+    }
     ctx.restore();
-    const activeChat = packet.chat && now - packet.chatTime < CHAT_BUBBLE_MS ? packet.chat : '';
+    const activeChat = packet.chat && now - packet.chatTime < GameConfig.timings.chatBubbleMs ? packet.chat : '';
     drawTextBubble(remoteVisuals[id].x + playerState.width / 2, remoteVisuals[id].y - 7, packet.name, activeChat, false);
   }
 
