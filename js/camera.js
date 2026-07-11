@@ -18,6 +18,25 @@ export function updateCamera(dt, playerState, worldState) {
   const worldPixelHeight = worldState.height * TILE_SIZE;
   const vw = canvas.width  / devicePixelRatio / cameraState.zoom;
   const vh = canvas.height / devicePixelRatio / cameraState.zoom;
-  cameraState.x = clamp(cameraState.x, Math.min(vw/2, worldPixelWidth  - vw/2), Math.max(vw/2, worldPixelWidth  - vw/2));
-  cameraState.y = clamp(cameraState.y, Math.min(vh/2, worldPixelHeight - vh/2), Math.max(vh/2, worldPixelHeight - vh/2));
+
+  // Strict camera clamp: viewport must never show outside the world at any zoom
+  const halfW = vw / 2;
+  const halfH = vh / 2;
+
+  const minX = halfW;
+  const maxX = worldPixelWidth - halfW;
+  const minY = halfH;
+  const maxY = worldPixelHeight - halfH;
+
+  if (worldPixelWidth <= vw) {
+    cameraState.x = worldPixelWidth / 2;
+  } else {
+    cameraState.x = clamp(cameraState.x, minX, maxX);
+  }
+
+  if (worldPixelHeight <= vh) {
+    cameraState.y = worldPixelHeight / 2;
+  } else {
+    cameraState.y = clamp(cameraState.y, minY, maxY);
+  }
 }

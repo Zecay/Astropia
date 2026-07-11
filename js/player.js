@@ -47,8 +47,10 @@ export function updatePlayer(dt) {
     playerState.vx += walkAccel * dt;
     if (playerState.vx > walkSpeed) playerState.vx = walkSpeed;
   } else {
-    if (playerState.vx > 0) playerState.vx = Math.max(0, playerState.vx - friction * dt);
-    else if (playerState.vx < 0) playerState.vx = Math.min(0, playerState.vx + friction * dt);
+    // Anti-slippery: stronger friction for instant stop
+    const stopFriction = friction * 3.2;
+    if (playerState.vx > 0) playerState.vx = Math.max(0, playerState.vx - stopFriction * dt);
+    else if (playerState.vx < 0) playerState.vx = Math.min(0, playerState.vx + stopFriction * dt);
   }
 
   if (playerState.onGround && Input.jumpJustPressed) {

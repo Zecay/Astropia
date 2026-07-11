@@ -94,6 +94,16 @@ export function setupInput() {
     if (e.code === 'Space') Input.jump = false;
   });
 
+  // Focus fix: reset movement when tabbing out / returning to window
+  window.addEventListener('blur', () => {
+    Input.left = false;
+    Input.right = false;
+    Input.jump = false;
+    Input.jumpJustPressed = false;
+    punchHeldSet(false);
+    hooks.endInteraction();
+  });
+
   // ── Mouse ──
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
   canvas.addEventListener('dragstart',   (e) => e.preventDefault());
@@ -122,15 +132,29 @@ export function setupInput() {
       hooks.tryBreakBlock(local.x, local.y);
     } else if (selectedItem.type === 'block' || selectedItem.type === 'seed') {
       hooks.tryPlaceBlock(local.x, local.y);
-      hooks.endInteraction();
+      // Continuous placement: keep active pointer for holding mouse
+      hooks.beginInteraction(local.x, local.y);
     } else {
       hooks.endInteraction();
     }
   });
 
   window.addEventListener('mousemove', (e) => {
+    // Update ghost hover for every mouse move
+    const local = clientToLocal(e.clientX, e.clientY);
+    const TILE_SIZE = GameConfig.world.tileSize;
+    // Store hover position globally for renderer ghost block
+    const zoom = cameraState ? cameraState.zoom : 1;
+    const camX = cameraState ? cameraState.x : 0;
+    const camY = cameraState ? cameraState.y : 0;
+    const worldX = (local.x + camX * zoom) / zoom;
+    const worldY = (local.y + camY * zoom) / zoom;
+    const tx = Math.floor(worldX / TILE_SIZE);
+    const ty = Math.floor(worldY / TILE_SIZE);
+
+    window.__ghostHover = { active: true, tx, ty, localX: local.x, localY: local.y };
+
     if (hooks.isMining() && (e.buttons & 1)) {
-      const local = clientToLocal(e.clientX, e.clientY);
       hooks.updateMinePointer(local.x, local.y);
       hooks.updateInteractionTarget(local.x, local.y);
     }
@@ -138,6 +162,8 @@ export function setupInput() {
 
   window.addEventListener('mouseup', (e) => {
     if (e.button === 0) hooks.endInteraction();
+    // Clear ghost on release
+    if (window.__ghostHover) window.__ghostHover.active = false;
   });
 
   // ── Touch / pointer ──

@@ -45,6 +45,15 @@ export async function loadConfig(path = 'config.json') {
   }
   GameConfig.seedCombinationMap = comboMap;
 
+  // Block combination recipes → fast lookup map
+  const blockComboMap = new Map();
+  for (const recipe of GameConfig.blockCombinationRecipes || []) {
+    if (!recipe || !Array.isArray(recipe.ingredients) || recipe.ingredients.length !== 2 || !recipe.result) continue;
+    const key = [...recipe.ingredients].sort().join('+');
+    blockComboMap.set(key, recipe.result);
+  }
+  GameConfig.blockCombinationMap = blockComboMap;
+
   loaded = true;
   return GameConfig;
 }

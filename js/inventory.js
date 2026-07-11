@@ -160,6 +160,27 @@ export function renderInventory() {
       entry.addEventListener('dragstart', (e) => { inventoryState.dragItemKey = itemKey; inventoryState.dragSourceSlot = i; inventoryState.dragSourceType = 'panel'; entry.classList.add('dragging'); e.dataTransfer.setData('text/plain', itemKey); });
       entry.addEventListener('dragend', () => { inventoryState.dragItemKey = null; inventoryState.dragSourceSlot = null; inventoryState.dragSourceType = null; entry.classList.remove('dragging'); });
       entry.addEventListener('dblclick', () => equipItemToSelectedQuickSlot(itemKey, i));
+
+      // Inventory Shortcut: click moves item to available quick-slot and selects it immediately
+      entry.addEventListener('click', (e) => {
+        if (e.detail > 1) return;
+        if (!itemKey || itemKey === 'hand') return;
+        let targetIndex = -1;
+        for (let q = 1; q < inventoryState.quickSlots.length; q++) {
+          if (!inventoryState.quickSlots[q]) { targetIndex = q; break; }
+        }
+        if (targetIndex === -1) targetIndex = inventoryState.selectedIndex === 0 ? 1 : inventoryState.selectedIndex;
+        if (targetIndex > 0 && targetIndex < inventoryState.quickSlots.length) {
+          const prev = inventoryState.quickSlots[targetIndex];
+          inventoryState.quickSlots[targetIndex] = itemKey;
+          if (typeof i === 'number' && i >= 0 && i < panelSlotCount()) {
+            inventoryState.panelSlots[i] = (prev && prev !== 'hand') ? prev : null;
+          }
+          inventoryState.quickSlots[0] = 'hand';
+          inventoryState.selectedIndex = targetIndex;
+          renderInventory();
+        }
+      });
     } else {
       entry.innerHTML = '<div class="itemIconEmpty">□</div>';
     }
@@ -227,7 +248,10 @@ export function applyInventoryLayout() {
   inventoryPanel.classList.toggle('open', openAmount > 0.02);
   inventoryToggle.style.visibility = 'visible';
   inventoryToggle.style.opacity    = '1';
-  inventoryUIGroup.style.right = (12 + inventoryState.safeRightInset) + 'px';
+  // Bottom-center positioning (UI re-layout)
+  inventoryUIGroup.style.left = '50%';
+  inventoryUIGroup.style.right = 'auto';
+  inventoryUIGroup.style.transform = `translateX(-50%)`;
   inventoryPanel.style.transform = `translateY(${(-12 * (1 - openAmount)).toFixed(2)}px) scaleY(${openAmount.toFixed(3)})`;
   inventoryPanel.style.opacity    = openAmount.toFixed(3);
 }

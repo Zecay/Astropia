@@ -12,11 +12,11 @@
 
   "world": {
     "tileSize": 32,
-    "worldWidth": 80,
-    "worldHeight": 64,
+    "worldWidth": 100,
+    "worldHeight": 60,
     "groundRow": 20,
-    "minZoom": 0.6,
-    "maxZoom": 2.5,
+    "minZoom": 0.3,
+    "maxZoom": 4.0,
     "zoomStep": 0.1,
     "fixedDt": 0.016666666666666666
   },
@@ -74,7 +74,7 @@
       "src": "assets/tileset.png",
       "cellSize": 32,
       "columns": 8,
-      "rows": 2
+      "rows": 3
     },
 
     "playerSprite": { "col": 0, "row": 1 },
@@ -155,6 +155,15 @@
         { "itemKey": "obsidian_seed", "chance": 0.45, "quantity": 1 },
         { "itemKey": "obsidian_block", "chance": 0.12, "quantity": 1 }
       ]
+    },
+    "9": {
+      "id": 9, "name": "Cave Background", "durability": 2, "breakable": true, "placeable": true,
+      "inventoryKey": "cave_bg", "color": "#4a3f2e", "border": "#32291f", "soundGroup": "dirt",
+      "sprite": { "col": 0, "row": 2 },
+      "isBackground": true,
+      "dropTable": [
+        { "itemKey": "cave_bg", "chance": 1.0, "quantity": 1 }
+      ]
     }
   },
 
@@ -171,7 +180,8 @@
     "lava_block":     { "key": "lava_block",     "name": "Lava Block",     "type": "block", "placeableTile": 5,    "usableForBreaking": false, "blockId": 5 },
     "grass_block":    { "key": "grass_block",    "name": "Grass Block",    "type": "block", "placeableTile": 6,    "usableForBreaking": false, "blockId": 6 },
     "stone_block":    { "key": "stone_block",    "name": "Stone Block",    "type": "block", "placeableTile": 7,    "usableForBreaking": false, "blockId": 7 },
-    "obsidian_block": { "key": "obsidian_block", "name": "Obsidian Block", "type": "block", "placeableTile": 8,    "usableForBreaking": false, "blockId": 8 }
+    "obsidian_block": { "key": "obsidian_block", "name": "Obsidian Block", "type": "block", "placeableTile": 8,    "usableForBreaking": false, "blockId": 8 },
+    "cave_bg":          { "key": "cave_bg",          "name": "Cave Background", "type": "block", "placeableTile": 9,    "usableForBreaking": false, "blockId": 9 }
   },
 
   "seeds": {
@@ -282,6 +292,15 @@
     { "ingredients": ["dirt", "rock"], "result": "grass" },
     { "ingredients": ["grass", "rock"], "result": "stone" },
     { "ingredients": ["stone", "lava"], "result": "obsidian" }
+  ],
+
+  "blockCombinationRecipes": [
+    { "ingredients": ["dirt_block", "cave_bg"], "result": "door" },
+    { "ingredients": ["dirt_block", "rock_block"], "result": "grass_block" },
+    { "ingredients": ["dirt_block", "lava_block"], "result": "wood_block" },
+    { "ingredients": ["rock_block", "lava_block"], "result": "glass_pane" },
+    { "ingredients": ["cave_bg", "rock_block"], "result": "sign" },
+    { "ingredients": ["lava_block", "cave_bg"], "result": "lava_rock" }
   ],
 
   "scoreValues": {

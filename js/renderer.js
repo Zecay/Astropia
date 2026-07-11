@@ -89,6 +89,7 @@ export function draw() {
   drawWorld();
   drawSeeds();
   drawDroppedItems();
+  drawGhostBlock(); // Ghost block preview
   drawInteractionHand();
   drawRemotePlayers();
   drawPlayer();
@@ -109,12 +110,34 @@ function drawWorld() {
   const top    = Math.floor((cameraState.y - canvas.height / devicePixelRatio / (2 * cameraState.zoom)) / TILE_SIZE) - 1;
   const bottom = Math.ceil( (cameraState.y + canvas.height / devicePixelRatio / (2 * cameraState.zoom)) / TILE_SIZE) + 1;
 
+  // Background layer (Cave Background etc.)
   for (let y = top; y <= bottom; y++) {
     for (let x = left; x <= right; x++) {
       const tile = getTileForRender(x, y);
       if (tile === 0) continue;
       const def = getBlockDef(tile);
-      if (!def) continue;
+      if (!def || !def.isBackground) continue;
+      const px = x * TILE_SIZE, py = y * TILE_SIZE;
+      const sprite = def.sprite;
+      if (sprite) {
+        drawSprite(sprite.col, sprite.row, px, py, TILE_SIZE, TILE_SIZE, def.color, def.border);
+      } else {
+        ctx.fillStyle = def.color || '#4a3f2e';
+        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+      }
+      ctx.strokeStyle = def.border || '#32291f';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(px + 0.5, py + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
+    }
+  }
+
+  // Solid blocks layer
+  for (let y = top; y <= bottom; y++) {
+    for (let x = left; x <= right; x++) {
+      const tile = getTileForRender(x, y);
+      if (tile === 0) continue;
+      const def = getBlockDef(tile);
+      if (!def || def.isBackground) continue;
       const px = x * TILE_SIZE, py = y * TILE_SIZE;
       const sprite = def.sprite;
       if (sprite) {
@@ -225,6 +248,38 @@ function drawSeedTouchUI() {
   ctx.fillStyle = '#17324d'; ctx.font = 'bold 11px Arial'; ctx.textAlign = 'center';
   ctx.fillText(def.displayName, bx + bw/2, by + 13);
   ctx.font = '10px Arial'; ctx.fillText(`${remaining}s left`, bx + bw/2, by + 26);
+  ctx.restore();
+}
+
+// Ghost block preview when hovering with a placeable block selected
+function drawGhostBlock() {
+  const TILE_SIZE = GameConfig.world.tileSize;
+  const selectedItem = getSelectedItemDef();
+  if (!selectedItem || !selectedItem.placeableTile) return;
+
+  // We need the current mouse position in world coords.
+  // The pointerTile data is not directly available here, so we use a global
+  // that we will populate from input.js (simple cross-module bridge).
+  if (!window.__ghostHover || !window.__ghostHover.active) return;
+
+  const { tx, ty } = window.__ghostHover;
+  const def = GameConfig.blocksByTile[selectedItem.placeableTile];
+  if (!def) return;
+
+  const px = tx * TILE_SIZE;
+  const py = ty * TILE_SIZE;
+
+  ctx.save();
+  ctx.globalAlpha = 0.45;
+  if (def.sprite) {
+    drawSprite(def.sprite.col, def.sprite.row, px, py, TILE_SIZE, TILE_SIZE, def.color, def.border);
+  } else {
+    ctx.fillStyle = def.color || '#9b6b3d';
+    ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+  }
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2);
   ctx.restore();
 }
 

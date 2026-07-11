@@ -45,11 +45,13 @@ export function createWorld() {
   worldState.tiles = Array.from({ length: worldState.height }, (_, y) => {
     const row = new Array(worldState.width).fill(0);
     const depthFromBedrock = (worldState.height - 1) - y;
-    if (y === worldState.height - 1) {
+
+    // Bottom 6 rows are always Bedrock (ID 2)
+    if (y >= worldState.height - 6) {
       row.fill(2);
     } else if (y === GROUND_ROW) {
       row.fill(3);
-    } else if (y > GROUND_ROW && y < worldState.height - 1) {
+    } else if (y > GROUND_ROW && y < worldState.height - 6) {
       for (let x = 0; x < worldState.width; x++) {
         let tile = rand() < (1/12) ? 4 : 1;
         if (depthFromBedrock === 4 && rand() < 0.15) tile = 5;
@@ -517,7 +519,12 @@ export function updateWorld(dt) {
 
   // activeMinePointer now stores canvas-local coords — safe to pass directly
   if (miningState.activeMinePointer) {
-    tryBreakBlock(miningState.activeMinePointer.x, miningState.activeMinePointer.y);
+    const selected = getSelectedItemDef();
+    if (selected && (selected.type === 'block' || selected.type === 'seed')) {
+      tryPlaceBlock(miningState.activeMinePointer.x, miningState.activeMinePointer.y);
+    } else {
+      tryBreakBlock(miningState.activeMinePointer.x, miningState.activeMinePointer.y);
+    }
   } else if (miningState.interactionTarget) {
     miningState.interactionTarget = null;
   }
