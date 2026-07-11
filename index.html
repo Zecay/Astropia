@@ -2,29 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Astropia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Remixtest</title>
   <link rel="stylesheet" href="css/style.css" />
-
-  <!-- Phaser 3 (latest stable) -->
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
 </head>
 <body>
-  <div id="game-container"></div>
 
-  <!--
-    ─── BOOT ORDER ───────────────────────────
-    1. Shared constants
-    2. Client modules (SoundManager, PlayerInventory, then scenes)
-    3. main.js – fetches config.json, creates Phaser.Game
-  -->
-  <script src="js/shared/PacketTypes.js"></script>
-  <script src="js/client/SoundManager.js"></script>
-  <script src="js/client/PlayerInventory.js"></script>
-  <script src="js/client/scenes/BootScene.js"></script>
-  <script src="js/client/scenes/LoadScene.js"></script>
-  <script src="js/client/scenes/GameScene.js"></script>
-  <script src="js/client/scenes/UIScene.js"></script>
-  <script src="js/main.js"></script>
+  <div id="loginScreen">
+    <div id="loginCard">
+      <h1>Remixtopia Multiplayer</h1>
+      <p>Enter a name, join the shared server, then mine, plant, jump, and chat with other players.</p>
+      <input type="text" id="usernameInput" placeholder="Your name..." maxlength="15" autocomplete="off" autofocus />
+      <button id="startButton" type="button">Join Game</button>
+    </div>
+  </div>
+  <canvas id="game" tabindex="0"></canvas>
+  <div id="hud">
+    <div id="hudInner">
+      <div class="panel">A/D or ←/→ move · Space hold jump<br>1-4 select quick slot · Mouse wheel zoom · Click 📦 to open inventory · Left click break/place · Walk into drops to collect</div>
+      <div class="panel" id="stats">Zoom: 1.00x</div>
+    </div>
+  </div>
+  <div id="inventoryUIGroup">
+    <div id="inventoryTopRow">
+      <div id="inventoryToggle">
+        <div class="hamburger">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+      <div id="inventoryBar"></div>
+    </div>
+    <div id="inventoryPanel">
+      <div id="inventoryPanelContents"></div>
+      <button id="saveQuitBtn">Save & Quit</button>
+    </div>
+  </div>
+  <div id="touchControls">
+    <div class="touchBtn" id="leftBtn">◀</div>
+    <div class="touchBtn" id="rightBtn">▶</div>
+    <div class="touchBtn" id="jumpBtn">▲</div>
+    <div class="touchBtn" id="punchBtn">✊</div>
+  </div>
+  <div id="networkStatus">Offline</div>
+  <div id="chatUI">
+    <div id="chatLog"></div>
+    <form id="chatForm" autocomplete="off">
+      <input id="chatInput" type="text" maxlength="80" placeholder="Press Enter to chat..." />
+      <button id="chatSendBtn" type="submit">Send</button>
+    </form>
+  </div>
+
+  <!-- All game logic now lives in js/*.js as ES modules. main.js imports and
+       wires everything together; load order is handled by the module graph. -->
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>
