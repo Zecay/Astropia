@@ -94,7 +94,8 @@ function makeDraggable(element, handle, { axis = 'both', anchor = 'top', onTap, 
     element.style.transition = '';
     document.body.style.userSelect = '';
     // Treat a near-stationary press as a click (toggle), not a drag.
-    if (moved < 6 && typeof onTap === 'function') onTap();
+    // Increased tolerance to 22px so mobile taps and slight mouse jitters reliably trigger onTap.
+    if (moved < 22 && typeof onTap === 'function') onTap();
   };
 
   handle.addEventListener('pointerdown', startDrag);
@@ -286,6 +287,17 @@ export function makeChatDraggable() {
   });
 }
 
+function updateInventoryTitle() {
+  if (!inventoryHeader || !inventoryWindow) return;
+  const titleEl = inventoryHeader.querySelector('.title');
+  if (!titleEl) return;
+  if (inventoryWindow.classList.contains('collapsed')) {
+    titleEl.innerHTML = 'INVENTORY <span style="color:#ffd700; font-size:12px; font-weight:900; margin-left:6px;">▲ (Tap to Open)</span>';
+  } else {
+    titleEl.innerHTML = 'INVENTORY <span style="color:#ffd700; font-size:12px; font-weight:900; margin-left:6px;">▼ (Tap to Close)</span>';
+  }
+}
+
 // ─── Main Initialization ─────────────────────────────────────────────────
 export function initGrowtopiaUI() {
   // Wire the floating inventory window. It intentionally stays hidden
@@ -293,7 +305,7 @@ export function initGrowtopiaUI() {
   // the login screen would sit on top of the Join button and block input.
   // main.js shows it inside joinMultiplayerGame() once the player is in-game.
   if (inventoryWindow) {
-    inventoryWindow.style.bottom = '30px';
+    inventoryWindow.style.bottom = '16px';
     inventoryWindow.style.left = '50%';
     inventoryWindow.style.transform = 'translateX(-50%)';
     // Start collapsed: only the always-visible dragger + 4 quick slots show,
@@ -307,10 +319,15 @@ export function initGrowtopiaUI() {
       makeDraggable(inventoryWindow, inventoryHeader, {
         axis: 'y',
         anchor: 'bottom',
-        onTap: () => inventoryWindow.classList.toggle('collapsed')
+        onTap: () => {
+          inventoryWindow.classList.toggle('collapsed');
+          updateInventoryTitle();
+        }
       });
     }
   }
+
+  updateInventoryTitle();
 
   // Render initial inventory grid
   renderGrowtopiaInventory();
