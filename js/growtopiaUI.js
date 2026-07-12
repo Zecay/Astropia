@@ -4,7 +4,7 @@
 
 import { GameConfig } from './config.js';
 import {
-  inventoryWindow, inventoryHeader, inventoryGrid, inventorySearch,
+  inventoryWindow, inventoryHeader, inventoryGrid,
   chatUI
 } from './dom.js';
 import {
@@ -12,6 +12,7 @@ import {
   getItemQuantity,
   addInventoryItem,
   setSelectedSlot,
+  getSelectedItemKey,
   renderInventory as oldRenderInventory
 } from './inventory.js';
 import { playerState } from './player.js';
@@ -103,133 +104,117 @@ function makeDraggable(element, handle, { axis = 'both', anchor = 'top', onTap, 
 }
 
 // Build a small item icon element (mirrors the look used across the UI).
+// Build a centered, pixelated item "sprite" element for a slot.
 function makeIcon(itemKey) {
   const def = GameConfig.items[itemKey];
-  const icon = document.createElement('div');
-  if (!def) return icon;
+  const sprite = document.createElement('div');
+  sprite.className = 'item-sprite';
+  if (!def) return sprite;
+  if (itemKey === 'hand') {
+    sprite.classList.add('hand');
+    sprite.textContent = '✊';
+    return sprite;
+  }
   if (def.type === 'block') {
     const blockDef = GameConfig.blocksByTile[def.blockId];
-    icon.style.width = '30px';
-    icon.style.height = '30px';
-    icon.style.background = blockDef?.color || '#9b6b3d';
-    icon.style.border = `2px solid ${blockDef?.border || '#7a522d'}`;
-    icon.style.borderRadius = '4px';
-  } else if (def.type === 'seed') {
-    const seedDef = GameConfig.seeds[def.seedType];
-    icon.style.width = '26px';
-    icon.style.height = '26px';
-    icon.style.background = seedDef?.bloomColor || '#7ac943';
-    icon.style.borderRadius = '50%';
-    icon.style.border = '2px solid #4d8f24';
-  } else {
-    icon.textContent = '✊';
-    icon.style.fontSize = '22px';
+    sprite.style.background = blockDef?.color || '#9b6b3d';
+    sprite.style.border = `2px solid ${blockDef?.border || '#7a522d'}`;
+    sprite.style.borderRadius = '3px';
+    return sprite;
   }
-  return icon;
+  if (def.type === 'seed') {
+    const seedDef = GameConfig.seeds[def.seedType];
+    sprite.style.background = seedDef?.bloomColor || '#7ac943';
+    sprite.style.border = '2px solid #4d8f24';
+    sprite.style.borderRadius = '50%';
+    return sprite;
+  }
+  return sprite;
+}
+
+// Build a single slot: relative container with an absolutely-centered sprite,
+// a bottom-right stack quantity, and (for worn items) an equipped checkmark
+// that overrides the quantity.
+function buildSlot(key, { selected = false, equipped = false, showQty = false } = {}) {
+  const slot = document.createElement('div');
+  if (selected) slot.classList.add('selected');
+  if (!key) return slot;
+  slot.appendChild(makeIcon(key));
+  if (equipped) {
+    const ck = document.createElement('div');
+    ck.className = 'equipped';
+    ck.textContent = '✔';
+    slot.appendChild(ck);
+  } else if (showQty) {
+    const qty = document.createElement('div');
+    qty.className = 'qty';
+    qty.textContent = String(getItemQuantity(key));
+    slot.appendChild(qty);
+  }
+  return slot;
+}
+
+// Equip a backpack item into the first free hotbar slot and select it.
+function equipToQuickSlot(itemKey) {
+  if (!itemKey || itemKey === 'hand') return;
+  let target = inventoryState.quickSlots.findIndex((s, i) => i > 0 && s === null);
+  if (target === -1) target = inventoryState.selectedIndex > 0 ? inventoryState.selectedIndex : 1;
+  if (target > 0 && target < inventoryState.quickSlots.length) {
+    inventoryState.quickSlots[target] = itemKey;
+    inventoryState.quickSlots[0] = 'hand';
+    setSelectedSlot(target);
+  }
 }
 
 // ─── New Inventory Renderer ────────────────────────────────────────────────
 // Renders TWO things:
-//   1) the always-visible 4-slot quick-access row (#invQuickRow), and
-//   2) the full backpack grid (#inventoryGrid, all owned items incl. hand).
+//   1) the always-visible hotbar (#invQuickRow) — 4 quick-access slots, and
+//   2) the full 12x4 backpack grid (#inventoryGrid, all owned non-hand items).
 export function renderGrowtopiaInventory() {
   const quickRow = document.getElementById('invQuickRow');
   const grid = document.getElementById('inventoryGrid');
   if (!grid) return;
 
-  // ── 1) Quick-access row (always visible) ──
+  // ── 1) Hotbar (always visible) ──
   if (quickRow) {
     quickRow.innerHTML = '';
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < inventoryState.quickSlots.length; i++) {
       const key = inventoryState.quickSlots[i] || null;
-      const slot = document.createElement('div');
-      slot.className = 'inv-quick-slot' + (i === inventoryState.selectedIndex ? ' selected' : '');
-      slot.dataset.slotIndex = String(i);
-      if (key) {
-        slot.appendChild(makeIcon(key));
-        if (key !== 'hand') {
-          const qty = document.createElement('div');
-          qty.className = 'qty';
-          qty.textContent = String(getItemQuantity(key));
-          slot.appendChild(qty);
-        }
-      } else {
-        slot.innerHTML = '<div class="itemIconEmpty">□</div>';
-      }
-      slot.addEventListener('click', () => setSelectedSlot(i));
+      const slot = buildSlot(key, {
+        selected: i === inventoryState.selectedIndex,
+        showQty: !!key && key !== 'hand'
+      });
+      slot.classList.add('inv-quick-slot');
+      if (key) slot.addEventListener('click', () => setSelectedSlot(i));
       quickRow.appendChild(slot);
     }
   }
 
-  // ── 2) Full grid (all owned items, incl. hand) ──
+  // ── 2) Full 12x4 grid (48 slots) ──
   grid.innerHTML = '';
-
-  const allItems = new Map();
-  inventoryState.quickSlots.forEach(key => {
-    if (key && key !== 'hand' && getItemQuantity(key) > 0) allItems.set(key, getItemQuantity(key));
-  });
-  inventoryState.panelSlots.forEach(key => {
-    if (key && getItemQuantity(key) > 0 && !allItems.has(key)) allItems.set(key, getItemQuantity(key));
-  });
+  const owned = [];
   for (const [key, data] of inventoryState.items) {
-    if (key !== 'hand' && data.quantity > 0 && !allItems.has(key)) allItems.set(key, data.quantity);
+    if (key !== 'hand' && data.quantity > 0) owned.push({ key, quantity: data.quantity });
   }
-  // Always show the Punch (hand/fist) in the grid.
-  if (getItemQuantity('hand') > 0) allItems.set('hand', getItemQuantity('hand'));
-
-  const keys = Array.from(allItems.keys());
-  keys.forEach(itemKey => {
-    const def = GameConfig.items[itemKey];
-    if (!def) return;
-
-    const slot = document.createElement('div');
-    slot.className = 'inv-slot';
-    slot.dataset.itemKey = itemKey;
-    slot.appendChild(makeIcon(itemKey));
-
-    const qty = document.createElement('div');
-    qty.className = 'qty';
-    qty.textContent = allItems.get(itemKey);
-    slot.appendChild(qty);
-
-    slot.addEventListener('click', () => {
-      // The hand (fist) is the default slot — selecting it just points at slot 0.
-      if (itemKey === 'hand') {
-        inventoryState.selectedIndex = 0;
-        renderGrowtopiaInventory();
-        oldRenderInventory();
-        return;
-      }
-      // Equip to first available quick slot.
-      let target = inventoryState.quickSlots.findIndex((s, i) => i > 0 && s === null);
-      if (target === -1) target = 1;
-      inventoryState.quickSlots[target] = itemKey;
-      inventoryState.selectedIndex = target;
-      renderGrowtopiaInventory();
-      oldRenderInventory();
+  const TOTAL_SLOTS = 48;
+  const equippedSet = new Set(inventoryState.quickSlots.filter(k => k && k !== 'hand'));
+  const selectedKey = getSelectedItemKey();
+  for (let i = 0; i < TOTAL_SLOTS; i++) {
+    const item = owned[i];
+    const key = item ? item.key : null;
+    const slot = buildSlot(key, {
+      selected: !!key && key === selectedKey,
+      equipped: !!key && equippedSet.has(key),
+      showQty: !!item && item.quantity > 1
     });
-
-    inventoryGrid.appendChild(slot);
-  });
+    slot.classList.add('inv-slot');
+    slot.dataset.itemKey = key || '';
+    if (key && key !== 'hand') slot.addEventListener('click', () => equipToQuickSlot(key));
+    grid.appendChild(slot);
+  }
 }
 
 // Search filter
-function setupSearch() {
-  if (!inventorySearch) return;
-
-  inventorySearch.addEventListener('input', () => {
-    const term = inventorySearch.value.toLowerCase().trim();
-    const slots = inventoryGrid.querySelectorAll('.inv-slot');
-
-    slots.forEach(slot => {
-      const key = slot.dataset.itemKey;
-      const def = GameConfig.items[key];
-      const name = (def?.name || key).toLowerCase();
-      slot.style.display = name.includes(term) ? '' : 'none';
-    });
-  });
-}
-
 // Side panel buttons
 function setupSideButtons() {
   const btns = {
@@ -320,8 +305,7 @@ export function initGrowtopiaUI() {
   // Render initial inventory grid
   renderGrowtopiaInventory();
 
-  // Setup search + side buttons
-  setupSearch();
+  // Setup side buttons
   setupSideButtons();
 
   // Make chat draggable

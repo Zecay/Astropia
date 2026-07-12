@@ -47,7 +47,7 @@ const afterJoin = await page.evaluate(() => {
   return {
     invDisplay: w ? getComputedStyle(w).display : 'MISSING',
     draggerClass: h ? h.className : '',
-    handInGrid: grid ? [...grid.querySelectorAll('.inv-slot')].some(s => s.dataset.itemKey === 'hand') : false,
+    handInHotbar: quick ? [...quick.querySelectorAll('.inv-quick-slot')].some(s => s.textContent.includes('✊')) : false,
     quickSlots: quick ? quick.querySelectorAll('.inv-quick-slot').length : -1,
     collapsedInit: w ? w.classList.contains('collapsed') : null
   };
@@ -69,7 +69,7 @@ try {
   await page.waitForTimeout(400);
   const r = await page.evaluate(() => {
     const slots = [...document.querySelectorAll('#inventoryGrid .inv-slot')];
-    return { count: slots.length, hasHand: slots.some(s => s.dataset.itemKey === 'hand') };
+    return { count: slots.length, hasHand: [...document.querySelectorAll('#invQuickRow .inv-quick-slot')].some(s => s.textContent.includes('✊')) };
   });
   gridAfterGive = r.count; handStill = r.hasHand;
 } catch (e) { devError = String(e.message || e); }
@@ -124,9 +124,9 @@ console.log('pageErrors:', pageErrors.length ? pageErrors : 'NONE');
 console.log('realConsoleErrors:', realErr.length ? realErr : 'NONE');
 
 const pass = boot.hasCanvas && boot.w > 0 && boot.delegate &&
-  afterJoin.invDisplay === 'block' && afterJoin.handInGrid && afterJoin.quickSlots === 4 &&
+  afterJoin.invDisplay === 'block' && afterJoin.handInHotbar && afterJoin.quickSlots === 4 &&
   afterJoin.collapsedInit === true &&
-  joinError === null && devError === null && gridAfterGive > 1 && handStill &&
+  joinError === null && devError === null && gridAfterGive >= 1 && handStill &&
   dragError === null && dragResult.display === 'block' && dragResult.moved &&
   tapError === null && collapsed && collapsed.afterFirstTap === false && collapsed.afterSecondTap === true &&
   chatHandle.ok && pageErrors.length === 0 && realErr.length === 0;

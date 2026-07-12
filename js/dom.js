@@ -58,7 +58,6 @@ const REQUIRED_IDS = {
   inventoryWindow: 'inventoryWindow',
   inventoryHeader: 'inventoryHeader',
   inventoryGrid: 'inventoryGrid',
-  inventorySearch: 'inventorySearch',
   leftBtn: 'leftBtn',
   rightBtn: 'rightBtn',
   jumpBtn: 'jumpBtn',

@@ -17,31 +17,28 @@
     </div>
   </div>
   <canvas id="game" tabindex="0"></canvas>
-  <!-- New Growtopia-style Floating Inventory Window -->
+  <!-- Growtopia-style Floating Inventory Window -->
   <div id="inventoryWindow" class="floating-window" style="display: none;">
     <!-- Persistent dragger: always visible; drag to move, click to collapse/expand -->
     <div class="window-header inv-dragger" id="inventoryHeader">
       <span class="inv-dragger-grip"></span>
-      <span class="title">Inventory</span>
+      <span class="title">INVENTORY</span>
     </div>
 
-    <!-- 4 quick-access slots (always visible) -->
-    <div id="invQuickRow" class="inv-quickrow"></div>
+    <!-- Hotbar: 4 quick-access slots, centered directly above the grid -->
+    <div id="invQuickRow" class="inv-hotbar"></div>
 
     <div class="window-content">
-      <!-- Search Bar -->
-      <input type="text" id="inventorySearch" class="inventory-search" placeholder="Enter Item Name...">
-
-      <!-- Item Grid -->
-      <div id="inventoryGrid" class="inventory-grid"></div>
-
-      <!-- Side Action Buttons -->
-      <div class="inventory-side">
-        <button id="btnRecycle">RECYCLE</button>
-        <button id="btnStore">STORE</button>
-        <button id="btnDrop">DROP</button>
-        <button id="btnInfo">INFO</button>
-        <button id="btnFav">FAV</button>
+      <div class="inv-body">
+        <!-- Main inventory grid: 12 columns x 4 rows -->
+        <div id="inventoryGrid" class="inventory-grid"></div>
+        <!-- Side action menu (vertical, far right) -->
+        <div class="inventory-side">
+          <button id="btnRecycle" type="button">RECYCLE</button>
+          <button id="btnStore" type="button">STORE</button>
+          <button id="btnDrop" type="button">DROP</button>
+          <button id="btnInfo" type="button">INFO</button>
+        </div>
       </div>
     </div>
   </div>

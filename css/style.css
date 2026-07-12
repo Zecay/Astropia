@@ -72,151 +72,189 @@ canvas {
   padding: 8px 16px;
 }
 
-/* ─── Growtopia-style Floating Draggable Windows ────────────────────────── */
+/* ─── Growtopia-style Inventory Panel ──────────────────────────────────── */
 .floating-window {
   position: absolute;
-  background: #0f1f33;
-  border: 5px solid #4aa3ff;
+  background: rgba(80, 130, 160, 0.85);
+  border: 6px solid #7fd4e8;
   border-radius: 10px;
-  box-shadow: 8px 8px 0 #00000066;
+  /* raised, bevelled 2D look */
+  box-shadow:
+    inset 3px 3px 0 rgba(255, 255, 255, 0.35),
+    inset -3px -3px 0 rgba(0, 0, 0, 0.30),
+    inset 0 0 18px rgba(0, 0, 0, 0.35),
+    6px 6px 0 rgba(0, 0, 0, 0.35);
   z-index: 200;
   pointer-events: auto;
   overflow: hidden;
-  font-family: inherit;
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  color: #fff;
 }
 
 .window-header {
-  background: linear-gradient(#1f3b5e, #0f1f33);
-  padding: 8px 14px;
+  background: linear-gradient(#5a93ad, #3f6f86);
+  padding: 7px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  cursor: move;
+  cursor: grab;
   user-select: none;
-  border-bottom: 3px solid #4aa3ff;
+  border-bottom: 3px solid #2f5566;
   color: #fff;
-  font-weight: bold;
+  font-weight: 800;
+  letter-spacing: 1px;
   font-size: 14px;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4);
 }
-
-.window-header .title {
-  flex: 1;
-}
+.window-header .title { flex: 1; }
 
 .window-content {
-  padding: 12px;
+  padding: 0;
   color: #fff;
 }
 
-/* Inventory Window Specific */
+/* Inventory Window: centered on the lower half of the screen */
 #inventoryWindow {
-  width: 520px;
-  min-height: 0;
-  bottom: 30px;
+  width: min(620px, 94vw);
+  bottom: 26px;
   left: 50%;
   transform: translateX(-50%);
 }
 
-#inventoryWindow .window-header {
-  background: #1a2b3c;
+/* ─── Hotbar (top, directly above the grid) ─────────────────────────────── */
+#invQuickRow {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  padding: 8px;
+  background: rgba(40, 70, 90, 0.55);
+  border-bottom: 3px solid #A0D0E0;
 }
 
+/* ─── Body: grid (left/center) + side buttons (far right) ───────────────── */
+.inv-body {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+}
+
+/* ─── Main inventory grid: exactly 12 columns x 4 rows ───────────────────── */
 .inventory-grid {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  gap: 6px;
-  padding: 8px;
-  background: #0f1f33;
-  max-height: 260px;
-  overflow-y: auto;
+  grid-template-columns: repeat(12, 1fr);
+  grid-auto-rows: 1fr;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
-.inventory-grid .inv-slot {
-  width: 42px;
-  height: 42px;
-  background: #1f3b5e;
-  border: 3px solid #4aa3ff;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Shared slot look (hotbar + grid): perfect squares */
+.inv-slot, .inv-quick-slot {
   position: relative;
+  aspect-ratio: 1 / 1;
+  background: rgba(40, 70, 90, 0.6);
+  border: 2px solid #A0D0E0;
+  border-radius: 4px;
+  box-sizing: border-box;
   cursor: pointer;
-  transition: transform .05s ease;
+  overflow: hidden;
 }
-
-.inventory-grid .inv-slot:hover {
-  border-color: #7ed957;
-  transform: scale(1.05);
+.inv-slot:hover, .inv-quick-slot:hover { border-color: #FFD700; }
+.inv-slot.selected, .inv-quick-slot.selected {
+  outline: 3px solid #FFD700;
+  outline-offset: -1px;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
 }
-
-/* ─── Inventory dragger (always-visible top handle) ─────────────────────── */
-.inv-dragger {
-  cursor: grab;
-  user-select: none;
-}
-.inv-dragger:active { cursor: grabbing; }
-.inv-dragger-grip {
-  width: 26px; height: 5px;
-  background: rgba(255,255,255,0.55);
-  border-radius: 3px;
-  box-shadow: 0 7px 0 rgba(255,255,255,0.55), 0 -7px 0 rgba(255,255,255,0.55);
+/* Hotbar slots keep an explicit size inside the flex row */
+.inv-quick-slot {
+  width: 48px;
+  height: 48px;
   flex: 0 0 auto;
 }
 
-/* ─── Quick-access row (4 slots, always visible) ─────────────────────────── */
-.inv-quickrow {
-  display: flex;
-  gap: 6px;
-  padding: 8px 8px 10px;
-  justify-content: center;
-  background: #16222e;
-  border-bottom: 2px solid #4aa3ff;
-}
-.inv-quick-slot {
-  width: 46px;
-  height: 46px;
-  background: #1f3b5e;
-  border: 3px solid #4aa3ff;
-  border-radius: 8px;
-  position: relative;
+/* ─── Item sprite: centered, pixelated ──────────────────────────────────── */
+.item-sprite {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 76%;
+  height: 76%;
+  image-rendering: pixelated;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  box-sizing: border-box;
 }
-.inv-quick-slot:hover { border-color: #7ed957; }
-.inv-quick-slot.selected {
-  border-color: var(--ui-slot-selected);
-  box-shadow: 0 0 10px rgba(255,209,102,0.65), 0 0 0 1px rgba(255,209,102,0.6) inset;
+.item-sprite.hand {
+  width: auto;
+  height: auto;
+  font-size: 20px;
 }
-.inv-quick-slot .qty {
+
+/* ─── Stack quantity (bottom-right, black stroke) ───────────────────────── */
+.qty {
   position: absolute;
-  right: 3px;
-  bottom: 1px;
-  font-size: 11px;
-  font-weight: 900;
+  bottom: 2px;
+  right: 2px;
   color: #fff;
+  font: 900 11px/1 'Segoe UI', Tahoma, sans-serif;
+  text-shadow:
+    1px 1px 0 #000, -1px -1px 0 #000,
+    1px -1px 0 #000, -1px 1px 0 #000;
+}
+
+/* ─── Equipped checkmark (overrides quantity for worn items) ────────────── */
+.equipped {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  color: #ff9a1a;
+  font-size: 13px;
+  font-weight: 900;
   text-shadow: 1px 1px 0 #000;
 }
 
-/* Collapsed state: only the dragger + quick slots remain visible */
+/* ─── Side action menu (vertical, far right) ────────────────────────────── */
+.inventory-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 96px;
+  flex: 0 0 auto;
+}
+.inventory-side button {
+  width: 100%;
+  padding: 10px 6px;
+  background: #B0D8E8;
+  color: #33414a;
+  font: 900 12px/1 'Segoe UI', Tahoma, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.7),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.25);
+}
+.inventory-side button:active {
+  transform: translateY(1px);
+  box-shadow:
+    inset -2px -2px 0 rgba(255, 255, 255, 0.7),
+    inset 2px 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* Collapsed state: only the dragger + hotbar remain visible */
 #inventoryWindow.collapsed .window-content { display: none; }
 
 /* Chat collapsed: only the title bar stays visible */
 #chatUI.collapsed #chatLog,
 #chatUI.collapsed #chatForm { display: none; }
 
-.inventory-grid .inv-slot .qty {
-  position: absolute;
-  right: 3px;
-  bottom: 1px;
-  font-size: 11px;
-  font-weight: 900;
-  color: #fff;
-  text-shadow: 1px 1px 0 #000;
-}
+
 
 .inventory-search {
   width: 100%;
