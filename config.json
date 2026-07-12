@@ -181,7 +181,7 @@
     "grass_block":    { "key": "grass_block",    "name": "Grass Block",    "type": "block", "placeableTile": 6,    "usableForBreaking": false, "blockId": 6 },
     "stone_block":    { "key": "stone_block",    "name": "Stone Block",    "type": "block", "placeableTile": 7,    "usableForBreaking": false, "blockId": 7 },
     "obsidian_block": { "key": "obsidian_block", "name": "Obsidian Block", "type": "block", "placeableTile": 8,    "usableForBreaking": false, "blockId": 8 },
-    "cave_bg":          { "key": "cave_bg",          "name": "Cave Background", "type": "block", "placeableTile": 9,    "usableForBreaking": false, "blockId": 9 }
+    "cave_bg":          { "key": "cave_bg",          "name": "Cave Background", "type": "block", "placeableTile": 9,    "usableForBreaking": true,  "blockId": 9 }
   },
 
   "seeds": {

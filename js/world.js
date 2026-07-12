@@ -347,9 +347,17 @@ export function updateInteractionTarget(localX, localY) {
   }
 
   const tile = getTile(tx, ty);
+  const bg = getBackgroundTile(tx, ty);
+  const sel = getSelectedItemDef();
 
   if (tile !== 0 && tile !== 2 && canModifyTile(tx, ty) && getBlockDurability(tile) > 0) {
     miningState.interactionTarget = { tx, ty, kind: 'block' };
+    return miningState.interactionTarget;
+  }
+
+  // Background layer is only targetable when no solid block is in front.
+  if (tile === 0 && bg !== 0 && sel.usableForBreaking && canModifyTile(tx, ty)) {
+    miningState.interactionTarget = { tx, ty, kind: 'bg' };
     return miningState.interactionTarget;
   }
 
@@ -370,7 +378,7 @@ export function tryBreakBlock(localX, localY) {
     return true;
   }
 
-  if (target.kind === 'block') {
+  if (target.kind === 'block' || target.kind === 'bg') {
     damageBlock(target.tx, target.ty);
     return true;
   }
@@ -534,7 +542,13 @@ export function tryPunchAction() {
     }
 
     const tile = getTile(tx, ty);
-    if (getBlockDurability(tile) && tile !== 2 && canModifyTile(tx, ty)) {
+    const bg = getBackgroundTile(tx, ty);
+    const sel = getSelectedItemDef();
+    const canBreakSolid = getBlockDurability(tile) && tile !== 2 && canModifyTile(tx, ty);
+    // Background blocks (e.g. Cave Background) are only punchable when no
+    // solid block sits in front of them.
+    const canBreakBg = tile === 0 && bg !== 0 && sel.usableForBreaking && canModifyTile(tx, ty);
+    if (canBreakSolid || canBreakBg) {
       if (damageBlock(tx, ty)) return true;
     }
   }

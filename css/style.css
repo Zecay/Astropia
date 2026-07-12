@@ -111,7 +111,7 @@ canvas {
 /* Inventory Window Specific */
 #inventoryWindow {
   width: 520px;
-  min-height: 380px;
+  min-height: 0;
   bottom: 30px;
   left: 50%;
   transform: translateX(-50%);
@@ -203,6 +203,10 @@ canvas {
 
 /* Collapsed state: only the dragger + quick slots remain visible */
 #inventoryWindow.collapsed .window-content { display: none; }
+
+/* Chat collapsed: only the title bar stays visible */
+#chatUI.collapsed #chatLog,
+#chatUI.collapsed #chatForm { display: none; }
 
 .inventory-grid .inv-slot .qty {
   position: absolute;

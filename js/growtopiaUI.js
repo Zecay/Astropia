@@ -18,13 +18,18 @@ import { playerState } from './player.js';
 
 // ─── Draggable Window Logic ───────────────────────────────────────────────
 // Drags `element` by its `handle`.
-//   axis:  'both' (default) or 'y' (vertical-only).
-//   onTap: fired on pointerup when the pointer barely moved (a click, not a
-//          drag) — used to toggle the inventory open/collapsed.
-function makeDraggable(element, handle, { axis = 'both', onTap } = {}) {
+//   axis:    'both' (default) or 'y' (vertical-only).
+//   anchor:  'top' (default) or 'bottom' — which CSS edge the vertical drag
+//            moves (bottom-anchored windows grow upward, like Growtopia).
+//   clamp:   when true (default) vertical dragging is bounded so the window
+//            can't be flung off-screen or dragged further than a max range.
+//   onTap:   fired on pointerup when the pointer barely moved (a click, not a
+//            drag) — used to toggle the inventory open/collapsed.
+function makeDraggable(element, handle, { axis = 'both', anchor = 'top', onTap, clamp = true } = {}) {
   let isDragging = false;
   let offsetX = 0, offsetY = 0;
   let startX = 0, startY = 0, moved = 0;
+  let startBottom = 0;
 
   const startDrag = (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
@@ -34,9 +39,23 @@ function makeDraggable(element, handle, { axis = 'both', onTap } = {}) {
     offsetX = e.clientX - rect.left;
     offsetY = e.clientY - rect.top;
     startX = e.clientX; startY = e.clientY;
-    if (axis === 'y') element.style.bottom = 'auto'; // switch to top-anchored
+    // For bottom-anchored windows we drive the `bottom` offset directly.
+    if (axis === 'y' && anchor === 'bottom') {
+      element.style.top = 'auto';
+      startBottom = window.innerHeight - rect.bottom;
+      element.style.bottom = startBottom + 'px';
+    }
     element.style.transition = 'none';
     document.body.style.userSelect = 'none';
+  };
+
+  const clampBottom = (bottom) => {
+    const minBottom = 8; // can't sink more than 8px below the viewport
+    const maxBottom = Math.max(
+      minBottom,
+      window.innerHeight - element.offsetHeight - Math.round(window.innerHeight * 0.12)
+    );
+    return Math.max(minBottom, Math.min(bottom, maxBottom));
   };
 
   const doDrag = (e) => {
@@ -46,11 +65,19 @@ function makeDraggable(element, handle, { axis = 'both', onTap } = {}) {
     const newTop = e.clientY - offsetY;
 
     if (axis === 'y') {
-      // Vertical only — keep the window horizontally centered.
-      const top = Math.max(0, newTop);
-      element.style.left = '50%';
-      element.style.transform = 'translateX(-50%)';
-      element.style.top = top + 'px';
+      if (anchor === 'bottom') {
+        // Dragging up raises `bottom`; clamp to a bounded vertical range.
+        const delta = startY - e.clientY; // up = positive
+        const bottom = clamp ? clampBottom(startBottom + delta) : startBottom + delta;
+        element.style.bottom = bottom + 'px';
+      } else {
+        const top = clamp
+          ? Math.max(Math.round(window.innerHeight * 0.12),
+                     Math.min(newTop, window.innerHeight - element.offsetHeight - 8))
+          : newTop;
+        element.style.bottom = 'auto';
+        element.style.top = top + 'px';
+      }
     } else {
       const maxLeft = window.innerWidth - element.offsetWidth;
       const maxTop = window.innerHeight - element.offsetHeight;
@@ -238,23 +265,30 @@ function setupSideButtons() {
 // ─── Chat Draggable Window ───────────────────────────────────────────────
 export function makeChatDraggable() {
   if (!chatUI) return;
-  chatUI.style.position = 'absolute';
-  chatUI.style.top = '60px';
-  chatUI.style.left = '50%';
-  chatUI.style.transform = 'translateX(-50%)';
+  // Dock bottom-left, Growtopia-style (only vertically draggable, bounded).
+  chatUI.style.position = 'fixed';
+  chatUI.style.left = '12px';
+  chatUI.style.bottom = '16px';
+  chatUI.style.top = 'auto';
+  chatUI.style.transform = 'none';
   chatUI.style.zIndex = '250';
 
-  // Add a dedicated drag handle at the top of the chat window.
+  // Add a dedicated drag handle / title bar at the top of the chat window.
   const header = document.createElement('div');
+  header.id = 'chatDragHandle';
   header.style.cssText = `
-    background:#1a2b3c; padding:4px 12px; font-size:12px; color:#7ed957;
-    cursor:move; text-align:center; border-bottom:2px solid #4aa3ff;
-    pointer-events:auto;
+    background:#1a2b3c; padding:5px 12px; font-size:12px; color:#7ed957;
+    cursor:grab; text-align:center; border-bottom:2px solid #4aa3ff;
+    pointer-events:auto; user-select:none;
   `;
-  header.textContent = 'Chat (drag to move)';
+  header.textContent = 'Chat';
   chatUI.insertBefore(header, chatUI.firstChild);
 
-  makeDraggable(chatUI, header);
+  makeDraggable(chatUI, header, {
+    axis: 'y',
+    anchor: 'bottom',
+    onTap: () => chatUI.classList.toggle('collapsed')
+  });
 }
 
 // ─── Main Initialization ─────────────────────────────────────────────────
@@ -267,13 +301,17 @@ export function initGrowtopiaUI() {
     inventoryWindow.style.bottom = '30px';
     inventoryWindow.style.left = '50%';
     inventoryWindow.style.transform = 'translateX(-50%)';
+    // Start collapsed: only the always-visible dragger + 4 quick slots show,
+    // exactly like Growtopia's bottom item bar. Click the dragger to expand.
+    inventoryWindow.classList.add('collapsed');
 
-    // The top dragger is always visible. Dragging it moves the whole window;
-    // a plain click on it toggles the inventory open/collapsed (the dragger
-    // and the 4 quick slots always remain visible).
+    // The top dragger is always visible. Dragging it moves the whole window
+    // vertically (bounded); a plain click on it toggles the inventory
+    // open/collapsed (the dragger and the 4 quick slots always remain visible).
     if (inventoryHeader) {
       makeDraggable(inventoryWindow, inventoryHeader, {
-        axis: 'both',
+        axis: 'y',
+        anchor: 'bottom',
         onTap: () => inventoryWindow.classList.toggle('collapsed')
       });
     }

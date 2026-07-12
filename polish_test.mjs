@@ -48,7 +48,8 @@ const afterJoin = await page.evaluate(() => {
     invDisplay: w ? getComputedStyle(w).display : 'MISSING',
     draggerClass: h ? h.className : '',
     handInGrid: grid ? [...grid.querySelectorAll('.inv-slot')].some(s => s.dataset.itemKey === 'hand') : false,
-    quickSlots: quick ? quick.querySelectorAll('.inv-quick-slot').length : -1
+    quickSlots: quick ? quick.querySelectorAll('.inv-quick-slot').length : -1,
+    collapsedInit: w ? w.classList.contains('collapsed') : null
   };
 });
 
@@ -124,9 +125,10 @@ console.log('realConsoleErrors:', realErr.length ? realErr : 'NONE');
 
 const pass = boot.hasCanvas && boot.w > 0 && boot.delegate &&
   afterJoin.invDisplay === 'block' && afterJoin.handInGrid && afterJoin.quickSlots === 4 &&
+  afterJoin.collapsedInit === true &&
   joinError === null && devError === null && gridAfterGive > 1 && handStill &&
   dragError === null && dragResult.display === 'block' && dragResult.moved &&
-  tapError === null && collapsed && collapsed.afterFirstTap === true && collapsed.afterSecondTap === false &&
+  tapError === null && collapsed && collapsed.afterFirstTap === false && collapsed.afterSecondTap === true &&
   chatHandle.ok && pageErrors.length === 0 && realErr.length === 0;
 console.log(pass ? '\nRESULT: POLISH 2 OK ✅' : '\nRESULT: FAILED ❌');
 
