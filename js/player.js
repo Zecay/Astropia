@@ -49,7 +49,7 @@ export function updatePlayer(dt) {
 
   // Noclip: skip all collision
   if (noclip) {
-    // Free movement in all directions
+    // Free movement in all directions. Space = up, Shift = down.
     if (Input.left && !Input.right) {
       playerState.facing = -1;
       playerState.x -= walkSpeed * dt * 1.3;
@@ -61,7 +61,7 @@ export function updatePlayer(dt) {
     if (Input.jump) {
       playerState.y -= walkSpeed * dt * 1.3;
     }
-    if (Input.right && Input.left) { // optional: shift down if both arrows pressed
+    if (Input.shift) {
       playerState.y += walkSpeed * dt * 1.3;
     }
 
@@ -82,10 +82,9 @@ export function updatePlayer(dt) {
     playerState.vx += walkAccel * dt;
     if (playerState.vx > walkSpeed) playerState.vx = walkSpeed;
   } else {
-    // Anti-slippery: stronger friction for instant stop
-    const stopFriction = friction * 3.2;
-    if (playerState.vx > 0) playerState.vx = Math.max(0, playerState.vx - stopFriction * dt);
-    else if (playerState.vx < 0) playerState.vx = Math.min(0, playerState.vx + stopFriction * dt);
+    // Anti-slippery: instant stop when no movement key is pressed, so the
+    // player never keeps sliding after releasing left/right.
+    playerState.vx = 0;
   }
 
   // Fly mode overrides gravity

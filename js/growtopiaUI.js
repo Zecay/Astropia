@@ -17,7 +17,11 @@ import {
 import { playerState } from './player.js';
 
 // ─── Draggable Window Logic ───────────────────────────────────────────────
-function makeDraggable(element, handle) {
+// Drags `element` by its `handle`.
+//   axis:  'both' (default) or 'y' (vertical-only — the inventory window
+//          stays horizontally centered at left:50% / translateX(-50%)).
+//   onClose: optional callback fired after the window slides off-screen.
+function makeDraggable(element, handle, { axis = 'both', onClose } = {}) {
   let isDragging = false;
   let offsetX = 0, offsetY = 0;
 
@@ -27,25 +31,32 @@ function makeDraggable(element, handle) {
     const rect = element.getBoundingClientRect();
     offsetX = e.clientX - rect.left;
     offsetY = e.clientY - rect.top;
+    if (axis === 'y') element.style.bottom = 'auto'; // switch to top-anchored
     element.style.transition = 'none';
     document.body.style.userSelect = 'none';
   };
 
   const doDrag = (e) => {
-    if (!isDragging) return;
-    let newLeft = e.clientX - offsetX;
-    let newTop = e.clientY - offsetY;
+    if (!isDragging || element._closing) return;
+    const newLeft = e.clientX - offsetX;
+    const newTop = e.clientY - offsetY;
 
-    // Keep within viewport
-    const maxLeft = window.innerWidth - element.offsetWidth;
-    const maxTop = window.innerHeight - element.offsetHeight;
-
-    newLeft = Math.max(0, Math.min(newLeft, maxLeft));
-    newTop = Math.max(0, Math.min(newTop, maxTop));
-
-    element.style.left = newLeft + 'px';
-    element.style.top = newTop + 'px';
-    element.style.transform = 'none';
+    if (axis === 'y') {
+      // Vertical only — keep the window horizontally centered. No upper clamp
+      // so it can be dragged down past the viewport and closed.
+      const top = Math.max(0, newTop);
+      element.style.left = '50%';
+      element.style.transform = 'translateX(-50%)';
+      element.style.top = top + 'px';
+      // Dragged below the bottom edge → slide off-screen and close.
+      if (top + element.offsetHeight > window.innerHeight) closeInventoryWindow(element, onClose);
+    } else {
+      const maxLeft = window.innerWidth - element.offsetWidth;
+      const maxTop = window.innerHeight - element.offsetHeight;
+      element.style.left = Math.max(0, Math.min(newLeft, maxLeft)) + 'px';
+      element.style.top = Math.max(0, Math.min(newTop, maxTop)) + 'px';
+      element.style.transform = 'none';
+    }
   };
 
   const endDrag = () => {
@@ -58,6 +69,22 @@ function makeDraggable(element, handle) {
   window.addEventListener('pointermove', doDrag);
   window.addEventListener('pointerup', endDrag);
   window.addEventListener('pointercancel', endDrag);
+}
+
+// Slide the floating inventory window down off-screen and hide it (close).
+function closeInventoryWindow(element, onClose) {
+  if (element._closing) return;
+  element._closing = true;
+  element.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
+  element.style.transform = 'translate(-50%, 110%)';
+  element.style.opacity = '0';
+  setTimeout(() => {
+    element.style.display = 'none';
+    element._closing = false;
+    element.style.transition = '';
+    element.style.opacity = '';
+    if (typeof onClose === 'function') onClose();
+  }, 260);
 }
 
 // ─── New Inventory Grid Renderer ─────────────────────────────────────────
@@ -89,6 +116,10 @@ export function renderGrowtopiaInventory() {
       allItems.set(key, data.quantity);
     }
   }
+
+  // Always show the Punch (hand/fist) in the grid, even though it's the
+  // default quick-slot item.
+  if (getItemQuantity('hand') > 0) allItems.set('hand', getItemQuantity('hand'));
 
   const keys = Array.from(allItems.keys());
 
@@ -130,6 +161,14 @@ export function renderGrowtopiaInventory() {
 
     // Click to select / move to quickslot
     slot.addEventListener('click', () => {
+      // The hand (fist) is the default slot — selecting it just points at
+      // slot 0 rather than trying to equip it into another quick slot.
+      if (itemKey === 'hand') {
+        inventoryState.selectedIndex = 0;
+        renderGrowtopiaInventory();
+        oldRenderInventory(); // keep old bar in sync if needed
+        return;
+      }
       // Try to equip to first available quick slot
       let target = inventoryState.quickSlots.findIndex((s, i) => i > 0 && s === null);
       if (target === -1) target = 1;
@@ -202,11 +241,12 @@ export function makeChatDraggable() {
   chatUI.style.transform = 'translateX(-50%)';
   chatUI.style.zIndex = '250';
 
-  // Add a header for dragging
+  // Add a dedicated drag handle at the top of the chat window.
   const header = document.createElement('div');
   header.style.cssText = `
     background:#1a2b3c; padding:4px 12px; font-size:12px; color:#7ed957;
     cursor:move; text-align:center; border-bottom:2px solid #4aa3ff;
+    pointer-events:auto;
   `;
   header.textContent = 'Chat (drag to move)';
   chatUI.insertBefore(header, chatUI.firstChild);
@@ -225,9 +265,9 @@ export function initGrowtopiaUI() {
     inventoryWindow.style.left = '50%';
     inventoryWindow.style.transform = 'translateX(-50%)';
 
-    // Make inventory draggable via header
+    // Make inventory draggable via header (vertical-only, stays centered).
     if (inventoryHeader) {
-      makeDraggable(inventoryWindow, inventoryHeader);
+      makeDraggable(inventoryWindow, inventoryHeader, { axis: 'y' });
     }
   }
 

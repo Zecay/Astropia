@@ -9,7 +9,7 @@
 // load) so the game never renders blank.
 
 import { GameConfig } from './config.js';
-import { canvas, ctx, stats } from './dom.js';
+import { canvas, ctx } from './dom.js';
 import { cameraState } from './camera.js';
 import { clamp, easeOutCubic } from './utils.js';
 import { playerState } from './player.js';
@@ -18,7 +18,7 @@ import {
   getBlockDef
 } from './world.js';
 import { plantedSeeds, isSeedMature, isPlayerTouchingSeed, getSeedGrowthStage } from './seeds.js';
-import { getSelectedItemKey, getSelectedItemDef, getItemQuantity } from './inventory.js';
+import { getSelectedItemDef } from './inventory.js';
 import { allPlayers, myId, myChat, myName, parseNetworkPayload } from './network.js';
 
 // Local (render-only) interpolation cache for remote player positions. This
@@ -97,10 +97,6 @@ export function draw() {
   drawSeedTouchUI();
 
   ctx.restore();
-
-  const selKey = getSelectedItemKey();
-  const qtyLabel = selKey === 'hand' ? '∞' : getItemQuantity(selKey);
-  stats.textContent = `Zoom: ${cameraState.zoom.toFixed(2)}x | Pos: ${Math.floor(playerState.x/TILE_SIZE)}, ${Math.floor(playerState.y/TILE_SIZE)} | Item: ${getSelectedItemDef().name} (${qtyLabel}) | Seeds: ${plantedSeeds.length} | World v${worldState.version}`;
 }
 
 function drawWorld() {
@@ -110,10 +106,11 @@ function drawWorld() {
   const top    = Math.floor((cameraState.y - canvas.height / devicePixelRatio / (2 * cameraState.zoom)) / TILE_SIZE) - 1;
   const bottom = Math.ceil( (cameraState.y + canvas.height / devicePixelRatio / (2 * cameraState.zoom)) / TILE_SIZE) + 1;
 
-  // Background layer (Cave Background etc.)
+  // ── Background layer (backgroundTiles: Cave Background etc.) ──
+  // Drawn FIRST so solids always render on top of backgrounds.
   for (let y = top; y <= bottom; y++) {
     for (let x = left; x <= right; x++) {
-      const tile = getTileForRender(x, y);
+      const tile = getBgTileForRender(x, y);
       if (tile === 0) continue;
       const def = getBlockDef(tile);
       if (!def || !def.isBackground) continue;
@@ -128,10 +125,11 @@ function drawWorld() {
       ctx.strokeStyle = def.border || '#32291f';
       ctx.lineWidth = 1;
       ctx.strokeRect(px + 0.5, py + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
+      drawBlockCracks(x, y, px, py, true);
     }
   }
 
-  // Solid blocks layer
+  // ── Solid blocks layer (tiles: collision) ──
   for (let y = top; y <= bottom; y++) {
     for (let x = left; x <= right; x++) {
       const tile = getTileForRender(x, y);
@@ -159,7 +157,7 @@ function drawWorld() {
         ctx.strokeRect(px + 2, py + 2, TILE_SIZE - 4, TILE_SIZE - 4);
       }
 
-      drawBlockCracks(x, y, px, py);
+      drawBlockCracks(x, y, px, py, false);
     }
   }
 }
@@ -169,8 +167,13 @@ function getTileForRender(tx, ty) {
   return worldState.tiles[ty][tx];
 }
 
-function drawBlockCracks(tx, ty, px, py) {
-  const state = blockDamage.get(getBlockKey(tx, ty));
+function getBgTileForRender(tx, ty) {
+  if (tx < 0 || ty < 0 || tx >= worldState.width || ty >= worldState.height) return 0;
+  return worldState.backgroundTiles[ty][tx];
+}
+
+function drawBlockCracks(tx, ty, px, py, isBg = false) {
+  const state = blockDamage.get((isBg ? 'bg_' : '') + getBlockKey(tx, ty));
   if (!state || state.damagePercent <= 0) return;
   const pct = state.damagePercent;
   const stage = pct <= 0.25 ? 1 : pct <= 0.5 ? 2 : pct <= 0.75 ? 3 : 4;

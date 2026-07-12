@@ -29,6 +29,9 @@ function createDevPanel() {
     top: 80px;
     right: 20px;
     width: 260px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-sizing: border-box;
     background: #0f1f33;
     border: 4px solid #4aa3ff;
     border-radius: 12px;

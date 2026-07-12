@@ -113,6 +113,7 @@ function getCurrentGameState() {
   return {
     version: 1,
     tiles: worldState.tiles,
+    backgroundTiles: worldState.backgroundTiles,
     player: {
       x: playerState.x, y: playerState.y,
       vx: playerState.vx, vy: playerState.vy,
@@ -138,6 +139,9 @@ function loadGameState(gs) {
     if (gs.tiles) {
       worldState.tiles = gs.tiles;
       worldState.version++;
+    }
+    if (gs.backgroundTiles) {
+      worldState.backgroundTiles = gs.backgroundTiles;
     }
     if (gs.player) {
       playerState.x = gs.player.x;

@@ -27,7 +27,16 @@ import {
 // ─── World generation ───────────────────────────────────────────────────────
 // width/height default to 0 until initWorldFromConfig() runs (right after
 // config load, before createWorld() is ever called).
-export const worldState = { width: 0, height: 0, tiles: [], version: 0 };
+export const worldState = { width: 0, height: 0, tiles: [], backgroundTiles: [], version: 0 };
+
+// Resolve the tile id of the "Cave Background" block from config (falls back
+// to 9 if the config shape ever changes).
+function findBackgroundBlockId() {
+  for (const key of Object.keys(GameConfig.blocks || {})) {
+    if (GameConfig.blocks[key] && GameConfig.blocks[key].isBackground) return Number(key);
+  }
+  return 9;
+}
 
 export function initWorldFromConfig() {
   worldState.width = GameConfig.world.worldWidth;
@@ -63,6 +72,18 @@ export function createWorld() {
     }
     return row;
   });
+
+  // ── Background layer ────────────────────────────────────────────────────
+  // Every underground tile (from the surface row down to bedrock) gets a
+  // 'Cave Background' block in backgroundTiles. These are purely decorative /
+  // non-colliding — solids live in `tiles` and render on top of them.
+  const CAVE_BG = findBackgroundBlockId();
+  worldState.backgroundTiles = Array.from({ length: worldState.height }, (_, y) => {
+    const row = new Array(worldState.width).fill(0);
+    if (y >= GROUND_ROW) row.fill(CAVE_BG);
+    return row;
+  });
+
   worldState.version++;
 }
 
@@ -92,10 +113,24 @@ export function getBlockDef(tile) {
 export function getBlockDurability(tile) { const d = getBlockDef(tile); return d ? d.durability || 0 : 0; }
 
 export function isTileSolid(tx, ty) {
-  const tile = getTile(tx, ty);
+  const tile = isBg ? getBackgroundTile(tx, ty) : getTile(tx, ty);
   if (tile === 0) return false;
   const def = getBlockDef(tile);
   return !!def;
+}
+
+// ─── Background layer accessors ──────────────────────────────────────────
+// Background tiles never collide (isTileSolid only consults the solid layer);
+// they just render behind the solids.
+export function getBackgroundTile(tx, ty) {
+  if (tx < 0 || ty < 0 || tx >= worldState.width || ty >= worldState.height) return 0;
+  return worldState.backgroundTiles[ty][tx];
+}
+export function setBackgroundTile(tx, ty, value) {
+  if (tx < 0 || ty < 0 || tx >= worldState.width || ty >= worldState.height) return;
+  worldState.backgroundTiles[ty][tx] = value;
+  if (value === 0) blockDamage.delete(`bg_${tx},${ty}`);
+  worldState.version++;
 }
 
 // ─── Range / collision checks ───────────────────────────────────────────────
@@ -132,12 +167,13 @@ export const blockDamage = new Map();
 
 export function getBlockKey(tx, ty) { return `${tx},${ty}`; }
 
-export function getOrCreateBlockDamageState(tx, ty) {
+export function getOrCreateBlockDamageState(tx, ty, isBg = false) {
+  const keyPrefix = isBg ? 'bg_' : '';
   const seed = getSeedAt(tx, ty);
   if (seed && !isSeedMature(seed)) {
     const def = GameConfig.seeds[seed.seedType];
     if (!def) return null;
-    const key = getBlockKey(tx, ty);
+    const key = keyPrefix + getBlockKey(tx, ty);
     let state = blockDamage.get(key);
     if (!state || state.tile !== `seed_${seed.seedType}`) {
       state = { tile:`seed_${seed.seedType}`, totalDurability:def.immatureHits, currentDamage:seed.hits, damagePercent:def.immatureHits > 0 ? seed.hits/def.immatureHits : 0, resetAt:null };
@@ -157,7 +193,7 @@ export function getOrCreateBlockDamageState(tx, ty) {
   return state;
 }
 
-export function clearBlockDamageState(tx, ty) { blockDamage.delete(getBlockKey(tx, ty)); }
+export function clearBlockDamageState(tx, ty, isBg = false) { blockDamage.delete((isBg ? 'bg_' : '') + getBlockKey(tx, ty)); }
 
 // ─── Particles ───────────────────────────────────────────────────────────────
 export const particles = [];
@@ -397,19 +433,28 @@ export function tryPlaceBlock(localX, localY) {
 }
 
 export function damageBlock(tx, ty) {
-  const TILE_SIZE = GameConfig.world.tileSize;
-  const HIT_COOLDOWN = GameConfig.timings.hitCooldown;
   const selectedItem = getSelectedItemDef();
   if (!selectedItem.usableForBreaking) return false;
 
-  const tile = getTile(tx, ty);
+  // Layered punching: hit the solid block first; only when the solid tile is
+  // air do we damage the background block behind it.
+  const solid = getTile(tx, ty);
+  if (solid !== 0) return damageTileLayer(tx, ty, solid, false);
+  const bg = getBackgroundTile(tx, ty);
+  if (bg !== 0) return damageTileLayer(tx, ty, bg, true);
+  return false;
+}
+
+// Damage a single tile layer (solid or background).
+function damageTileLayer(tx, ty, tile, isBg) {
+  const TILE_SIZE = GameConfig.world.tileSize;
+  const HIT_COOLDOWN = GameConfig.timings.hitCooldown;
   const blockDef = getBlockDef(tile);
   const durability = getBlockDurability(tile);
-  if (!blockDef || !blockDef.breakable || !durability || tile === 2 || !canModifyTile(tx, ty)) return false;
-
+  if (!blockDef || !blockDef.breakable || !durability || (!isBg && tile === 2) || !canModifyTile(tx, ty)) return false;
   if (miningState.mineCooldownRemaining > 0) return false;
 
-  const state = getOrCreateBlockDamageState(tx, ty);
+  const state = getOrCreateBlockDamageState(tx, ty, isBg);
   if (!state) return false;
 
   startHandStrike(tx, ty);
@@ -426,8 +471,8 @@ export function damageBlock(tx, ty) {
     if (blockDef.soundGroup === 'rock') playSound('rockBreak');
     else if (blockDef.soundGroup === 'dirt') playSound('dirtBreak');
 
-    clearBlockDamageState(tx, ty);
-    setTile(tx, ty, 0);
+    clearBlockDamageState(tx, ty, isBg);
+    if (isBg) setBackgroundTile(tx, ty, 0); else setTile(tx, ty, 0);
     applyBlockDrops(tile, tx, ty);
     spawnParticles(impactPoint.x, impactPoint.y, blockDef.color || '#9b6b3d', 14, 45, 120, 0.2, 0.4, 3, 6);
   } else {
@@ -521,7 +566,13 @@ export function updateWorld(dt) {
   if (miningState.activeMinePointer) {
     const selected = getSelectedItemDef();
     if (selected && (selected.type === 'block' || selected.type === 'seed')) {
-      tryPlaceBlock(miningState.activeMinePointer.x, miningState.activeMinePointer.y);
+      // Continuous placement: stop immediately once the selected item runs
+      // out, even if the mouse / pointer is still held down.
+      if (getItemQuantity(getSelectedItemKey()) <= 0) {
+        endInteraction();
+      } else {
+        tryPlaceBlock(miningState.activeMinePointer.x, miningState.activeMinePointer.y);
+      }
     } else {
       tryBreakBlock(miningState.activeMinePointer.x, miningState.activeMinePointer.y);
     }

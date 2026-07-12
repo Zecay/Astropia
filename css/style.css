@@ -206,6 +206,14 @@ canvas {
   white-space: normal;
 }
 
+/* ─── Dev Mode panel: keep all controls visible, never overflow ──────────── */
+#devPanel {
+  max-height: 80vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 12px;
+}
+
 #stats {
   color: var(--ui-slot-selected);
   font-size: 12px;

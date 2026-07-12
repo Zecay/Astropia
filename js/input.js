@@ -18,6 +18,7 @@ export const Input = {
   left: false,
   right: false,
   jump: false,
+  shift: false,
   jumpJustPressed: false,
   pointerTileX: 0,
   pointerTileY: 0
@@ -81,6 +82,7 @@ export function setupInput() {
     if (e.code === 'KeyA'  || e.code === 'ArrowLeft')  Input.left  = true;
     if (e.code === 'KeyD'  || e.code === 'ArrowRight') Input.right = true;
     if (e.code === 'Space') { if (!Input.jump) Input.jumpJustPressed = true; Input.jump = true; }
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') Input.shift = true;
     const { minZoom, maxZoom, zoomStep } = GameConfig.world;
     for (let i = 1; i <= GameConfig.inventory.quickSlotCount; i++)
       if (e.code === `Digit${i}` || e.code === `Numpad${i}`) { hooks.setSelectedSlot(i - 1); break; }
@@ -92,6 +94,7 @@ export function setupInput() {
     if (e.code === 'KeyA'  || e.code === 'ArrowLeft')  Input.left  = false;
     if (e.code === 'KeyD'  || e.code === 'ArrowRight') Input.right = false;
     if (e.code === 'Space') Input.jump = false;
+    if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') Input.shift = false;
   });
 
   // Focus fix: reset movement when tabbing out / returning to window
@@ -99,6 +102,7 @@ export function setupInput() {
     Input.left = false;
     Input.right = false;
     Input.jump = false;
+    Input.shift = false;
     Input.jumpJustPressed = false;
     punchHeldSet(false);
     hooks.endInteraction();

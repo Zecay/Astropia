@@ -18,7 +18,6 @@
 // ── Required elements (game cannot boot without these) ──────────────────────
 export let canvas = document.getElementById('game');
 export let ctx = canvas ? canvas.getContext('2d') : null;
-export let stats = document.getElementById('stats');
 
 export let inventoryWindow = document.getElementById('inventoryWindow');
 export let inventoryHeader = document.getElementById('inventoryHeader');
@@ -56,7 +55,6 @@ export let saveQuitBtn = document.getElementById('saveQuitBtn') || null;
 // dom-id -> export name, used only by initDom() for its audit message.
 const REQUIRED_IDS = {
   game: 'canvas',
-  stats: 'stats',
   inventoryWindow: 'inventoryWindow',
   inventoryHeader: 'inventoryHeader',
   inventoryGrid: 'inventoryGrid',
@@ -98,7 +96,6 @@ export function initDom() {
   // the optional/legacy elements.
   canvas = document.getElementById('game');
   ctx = canvas ? canvas.getContext('2d') : null;
-  stats = document.getElementById('stats');
 
   inventoryWindow = document.getElementById('inventoryWindow');
   inventoryHeader = document.getElementById('inventoryHeader');
