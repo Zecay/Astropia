@@ -75,60 +75,78 @@ canvas {
 /* ─── Growtopia-style Inventory Panel ──────────────────────────────────── */
 .floating-window {
   position: absolute;
-  background: rgba(80, 130, 160, 0.85);
-  border: 6px solid #7fd4e8;
-  border-radius: 10px;
-  /* raised, bevelled 2D look */
+  background: rgba(32, 56, 78, 0.94);
+  border: 5px solid #7ed4e8;
+  border-radius: 12px;
   box-shadow:
     inset 3px 3px 0 rgba(255, 255, 255, 0.35),
-    inset -3px -3px 0 rgba(0, 0, 0, 0.30),
-    inset 0 0 18px rgba(0, 0, 0, 0.35),
-    6px 6px 0 rgba(0, 0, 0, 0.35);
+    inset -3px -3px 0 rgba(0, 0, 0, 0.45),
+    0 8px 26px rgba(0, 0, 0, 0.55);
   z-index: 200;
   pointer-events: auto;
   overflow: hidden;
   font-family: 'Segoe UI', Tahoma, sans-serif;
   color: #fff;
+  transition: width 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .window-header {
-  background: linear-gradient(#5a93ad, #3f6f86);
-  padding: 7px 14px;
+  background: linear-gradient(180deg, #538eac, #396680);
+  padding: 8px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   cursor: grab;
   user-select: none;
-  border-bottom: 3px solid #2f5566;
+  border-bottom: 3px solid #28485c;
   color: #fff;
   font-weight: 800;
-  letter-spacing: 1px;
+  letter-spacing: 1.2px;
   font-size: 14px;
-  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4);
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
 }
-.window-header .title { flex: 1; }
+.window-header .title { flex: 1; text-align: center; }
 
 .window-content {
   padding: 0;
   color: #fff;
 }
 
-/* Inventory Window: centered on the lower half of the screen */
+/* Inventory Window: centered at the bottom of the screen */
 #inventoryWindow {
-  width: min(620px, 94vw);
+  width: min(660px, 95vw);
   bottom: 26px;
   left: 50%;
   transform: translateX(-50%);
 }
 
+/* Collapsed state: tight, compact pill box fitting exactly around the 4 quick slots */
+#inventoryWindow.collapsed {
+  width: fit-content;
+  min-width: 275px;
+  max-width: 95vw;
+  background: rgba(22, 42, 60, 0.96);
+  border-radius: 14px;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.3),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.5),
+    0 6px 20px rgba(0, 0, 0, 0.6);
+}
+#inventoryWindow.collapsed #invQuickRow {
+  border-bottom: none;
+  padding: 8px 12px;
+}
+#inventoryWindow.collapsed .window-content { display: none; }
+
 /* ─── Hotbar (top, directly above the grid) ─────────────────────────────── */
 #invQuickRow {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   justify-content: center;
-  padding: 8px;
-  background: rgba(40, 70, 90, 0.55);
-  border-bottom: 3px solid #A0D0E0;
+  padding: 10px;
+  background: rgba(20, 38, 54, 0.7);
+  border-bottom: 3px solid #7ed4e8;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.25);
 }
 
 /* ─── Body: grid (left/center) + side buttons (far right) ───────────────── */
@@ -136,8 +154,9 @@ canvas {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
-  gap: 10px;
-  padding: 10px;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(24, 44, 62, 0.5);
 }
 
 /* ─── Main inventory grid: exactly 12 columns x 4 rows ───────────────────── */
@@ -145,32 +164,46 @@ canvas {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   grid-auto-rows: 1fr;
-  gap: 4px;
+  gap: 5px;
   flex: 1 1 auto;
   min-width: 0;
 }
 
-/* Shared slot look (hotbar + grid): perfect squares */
+/* Shared slot look (hotbar + grid): perfect squares with steel-cyan borders */
 .inv-slot, .inv-quick-slot {
   position: relative;
   aspect-ratio: 1 / 1;
-  background: rgba(40, 70, 90, 0.6);
-  border: 2px solid #A0D0E0;
-  border-radius: 4px;
+  background: rgba(18, 34, 48, 0.85);
+  border: 2px solid #84c2d8;
+  border-radius: 6px;
   box-sizing: border-box;
   cursor: pointer;
   overflow: hidden;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.15),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.35);
+  transition: transform 0.06s ease, border-color 0.1s ease;
 }
-.inv-slot:hover, .inv-quick-slot:hover { border-color: #FFD700; }
+.inv-slot:hover, .inv-quick-slot:hover {
+  border-color: #ffd700;
+  background: rgba(28, 52, 72, 0.95);
+}
+.inv-slot:active, .inv-quick-slot:active {
+  transform: scale(0.95);
+}
 .inv-slot.selected, .inv-quick-slot.selected {
-  outline: 3px solid #FFD700;
+  border-color: #ffd700;
+  outline: 3px solid #ffd700;
   outline-offset: -1px;
-  box-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+  box-shadow:
+    0 0 12px rgba(255, 215, 0, 0.75),
+    inset 0 0 6px rgba(255, 215, 0, 0.35);
+  z-index: 2;
 }
 /* Hotbar slots keep an explicit size inside the flex row */
 .inv-quick-slot {
-  width: 48px;
-  height: 48px;
+  width: 50px;
+  height: 50px;
   flex: 0 0 auto;
 }
 
@@ -190,33 +223,41 @@ canvas {
 .item-sprite.hand {
   width: auto;
   height: auto;
-  font-size: 20px;
+  font-size: 24px;
+  filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.6));
 }
 
 /* ─── Stack quantity (bottom-right, black stroke) ───────────────────────── */
 .qty {
   position: absolute;
   bottom: 2px;
-  right: 2px;
+  right: 3px;
   color: #fff;
   font: 900 11px/1 'Segoe UI', Tahoma, sans-serif;
   text-shadow:
     1px 1px 0 #000, -1px -1px 0 #000,
-    1px -1px 0 #000, -1px 1px 0 #000;
+    1px -1px 0 #000, -1px 1px 0 #000,
+    0 1px 2px rgba(0,0,0,0.8);
+  pointer-events: none;
+  z-index: 3;
 }
 
 /* ─── Equipped checkmark (overrides quantity for worn items) ────────────── */
 .equipped {
   position: absolute;
   bottom: 2px;
-  right: 2px;
+  right: 3px;
   color: #ff9a1a;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 900;
-  text-shadow: 1px 1px 0 #000;
+  text-shadow:
+    1px 1px 0 #000, -1px -1px 0 #000,
+    1px -1px 0 #000, -1px 1px 0 #000;
+  pointer-events: none;
+  z-index: 3;
 }
 
-/* ─── Side action menu (vertical, far right) ────────────────────────────── */
+/* ─── Side action menu (vertical, far right inside inventory box) ───────── */
 .inventory-side {
   display: flex;
   flex-direction: column;
@@ -227,70 +268,124 @@ canvas {
 }
 .inventory-side button {
   width: 100%;
-  padding: 10px 6px;
-  background: #B0D8E8;
-  color: #33414a;
+  padding: 11px 6px;
+  background: linear-gradient(180deg, #c2e4f2, #98c4d8);
+  color: #1f3340;
   font: 900 12px/1 'Segoe UI', Tahoma, sans-serif;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border: none;
-  border-radius: 4px;
+  letter-spacing: 0.6px;
+  border: 2px solid #e0f4ff;
+  border-radius: 6px;
   cursor: pointer;
   box-shadow:
-    inset 2px 2px 0 rgba(255, 255, 255, 0.7),
-    inset -2px -2px 0 rgba(0, 0, 0, 0.25);
+    inset 1px 1px 0 rgba(255, 255, 255, 0.8),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.25),
+    2px 2px 0 rgba(0, 0, 0, 0.35);
+  transition: transform 0.05s ease, filter 0.1s ease;
+}
+.inventory-side button:hover {
+  filter: brightness(1.08);
 }
 .inventory-side button:active {
-  transform: translateY(1px);
+  transform: translate(1px, 1px);
   box-shadow:
-    inset -2px -2px 0 rgba(255, 255, 255, 0.7),
-    inset 2px 2px 0 rgba(0, 0, 0, 0.25);
+    inset -1px -1px 0 rgba(255, 255, 255, 0.8),
+    inset 1px 1px 0 rgba(0, 0, 0, 0.25),
+    1px 1px 0 rgba(0, 0, 0, 0.35);
 }
 
-/* Collapsed state: only the dragger + hotbar remain visible */
-#inventoryWindow.collapsed .window-content { display: none; }
+/* Roblox-style Top-Left Fixed Chat ───────────────────────────────────────── */
+#chatUI {
+  position: fixed;
+  left: 16px;
+  top: 16px;
+  z-index: 150;
+  width: min(350px, calc(100vw - 32px));
+  pointer-events: none;
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+}
+
+#chatLog {
+  max-height: 160px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(14, 26, 40, 0.82);
+  border-left: 2px solid rgba(126, 212, 232, 0.45);
+  border-right: 2px solid rgba(126, 212, 232, 0.45);
+  box-sizing: border-box;
+  text-align: left;
+  pointer-events: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(126, 212, 232, 0.5) transparent;
+}
+
+.chatLine {
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(24, 44, 64, 0.88);
+  border: 1px solid rgba(140, 199, 255, 0.35);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.3;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.6);
+  overflow-wrap: anywhere;
+}
+
+#chatForm {
+  display: flex;
+  gap: 6px;
+  pointer-events: auto;
+  background: rgba(20, 36, 52, 0.9);
+  padding: 8px;
+  border: 2px solid rgba(126, 212, 232, 0.45);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.45);
+}
+
+#chatInput {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 2px solid rgba(255,255,255,0.4);
+  background: rgba(10, 20, 32, 0.85);
+  color: white;
+  outline: none;
+  font: 13px inherit;
+}
+#chatInput:focus {
+  border-color: #7ed957;
+  background: rgba(10, 20, 32, 0.95);
+}
+
+#chatSendBtn {
+  padding: 0 14px;
+  border: 2px solid #347a2a;
+  border-radius: 6px;
+  background: #7ed957;
+  color: #10200f;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+}
+#chatSendBtn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+}
 
 /* Chat collapsed: only the title bar stays visible */
 #chatUI.collapsed #chatLog,
 #chatUI.collapsed #chatForm { display: none; }
-
-
-
-.inventory-search {
-  width: 100%;
-  padding: 8px 12px;
-  background: #1a2b3c;
-  border: 3px solid #4aa3ff;
-  color: #fff;
-  border-radius: 6px;
-  margin-bottom: 10px;
-  font-size: 14px;
-}
-
-.inventory-side {
-  position: absolute;
-  top: 0;
-  right: -70px;
-  width: 68px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.inventory-side button {
-  padding: 9px 6px;
-  background: #1f3b5e;
-  border: 3px solid #4aa3ff;
-  color: #fff;
-  font-weight: bold;
-  font-size: 11px;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.inventory-side button:hover {
-  background: #2a4f7a;
-}
 
 .panel {
   display: block;
@@ -332,17 +427,7 @@ canvas {
   transition: transform 0.18s ease;
 }
 
-/* Chat moved to top-left */
-#chatUI {
-  position: fixed;
-  left: 12px;
-  top: 12px;
-  bottom: auto;
-  z-index: 18;
-  width: min(340px, calc(100vw - 24px));
-  pointer-events: none;
-  font-family: inherit;
-}
+
 
 #inventoryUIGroup.open { transform: translateY(0); }
 

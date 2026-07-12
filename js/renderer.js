@@ -117,6 +117,15 @@ function drawWorld() {
       if (tile === 0) continue;
       const def = getBlockDef(tile);
       if (!def || !def.isBackground) continue;
+
+      // Optimization: if a solid, non-background block sits in front of this tile, skip drawing it completely!
+      const solidTile = getTileForRender(x, y);
+      const solidDef = getBlockDef(solidTile);
+      if (solidTile !== 0 && solidDef && !solidDef.isBackground) {
+        // Only check for background cracks just in case it is currently being punched behind air, otherwise skip
+        continue;
+      }
+
       const px = x * TILE_SIZE, py = y * TILE_SIZE;
       const base = def.color || '#34303c';
 
@@ -197,25 +206,52 @@ function drawBlockCracks(tx, ty, px, py, isBg = false) {
   const pct = state.damagePercent;
   const stage = pct <= 0.25 ? 1 : pct <= 0.5 ? 2 : pct <= 0.75 ? 3 : 4;
   ctx.save();
-  ctx.strokeStyle = 'rgba(30,30,30,0.55)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(px+16, py+4); ctx.lineTo(px+14, py+12); ctx.lineTo(px+18, py+19);
-  if (stage >= 2) {
-    ctx.moveTo(px+9,  py+10); ctx.lineTo(px+16, py+16); ctx.lineTo(px+8,  py+23);
-    ctx.moveTo(px+22, py+9);  ctx.lineTo(px+18, py+16); ctx.lineTo(px+24, py+24);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const drawCrackPath = () => {
+    ctx.beginPath();
+    ctx.moveTo(px+16, py+4); ctx.lineTo(px+14, py+12); ctx.lineTo(px+18, py+19);
+    if (stage >= 2) {
+      ctx.moveTo(px+9,  py+10); ctx.lineTo(px+16, py+16); ctx.lineTo(px+8,  py+23);
+      ctx.moveTo(px+22, py+9);  ctx.lineTo(px+18, py+16); ctx.lineTo(px+24, py+24);
+    }
+    if (stage >= 3) {
+      ctx.moveTo(px+5,  py+6);  ctx.lineTo(px+11, py+13); ctx.lineTo(px+6,  py+19);
+      ctx.moveTo(px+27, py+5);  ctx.lineTo(px+21, py+13); ctx.lineTo(px+28, py+18);
+      ctx.moveTo(px+13, py+20); ctx.lineTo(px+18, py+27);
+    }
+    if (stage >= 4) {
+      ctx.moveTo(px+4,  py+15); ctx.lineTo(px+10, py+17); ctx.lineTo(px+15, py+28);
+      ctx.moveTo(px+28, py+14); ctx.lineTo(px+21, py+18); ctx.lineTo(px+18, py+29);
+      ctx.moveTo(px+12, py+5);  ctx.lineTo(px+20, py+9);  ctx.lineTo(px+26, py+12);
+    }
+  };
+
+  if (isBg) {
+    // Bright golden/white crack outline so cave background cracks pop against #34303c dark rock
+    ctx.strokeStyle = 'rgba(255, 235, 150, 0.95)';
+    ctx.lineWidth = 3.0;
+    drawCrackPath();
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(10, 10, 10, 0.95)';
+    ctx.lineWidth = 1.4;
+    drawCrackPath();
+    ctx.stroke();
+  } else {
+    // Normal solid block cracks with contrast stroke
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+    ctx.lineWidth = 2.6;
+    drawCrackPath();
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(20, 20, 20, 0.88)';
+    ctx.lineWidth = 1.5;
+    drawCrackPath();
+    ctx.stroke();
   }
-  if (stage >= 3) {
-    ctx.moveTo(px+5,  py+6);  ctx.lineTo(px+11, py+13); ctx.lineTo(px+6,  py+19);
-    ctx.moveTo(px+27, py+5);  ctx.lineTo(px+21, py+13); ctx.lineTo(px+28, py+18);
-    ctx.moveTo(px+13, py+20); ctx.lineTo(px+18, py+27);
-  }
-  if (stage >= 4) {
-    ctx.moveTo(px+4,  py+15); ctx.lineTo(px+10, py+17); ctx.lineTo(px+15, py+28);
-    ctx.moveTo(px+28, py+14); ctx.lineTo(px+21, py+18); ctx.lineTo(px+18, py+29);
-    ctx.moveTo(px+12, py+5);  ctx.lineTo(px+20, py+9);  ctx.lineTo(px+26, py+12);
-  }
-  ctx.stroke();
+
   ctx.restore();
 }
 
@@ -255,6 +291,9 @@ function drawRockGrain(px, py, size, base, x, y) {
   ctx.fillStyle = shadeColor(base, shade);
   ctx.fillRect(px, py, size, size);
   ctx.globalAlpha = 1;
+
+  // Skip rendering tiny 1px speckles when zoomed out to max (`size * cameraState.zoom < 20`) to save thousands of fillRect calls!
+  if (size * cameraState.zoom < 20) return;
 
   const spec = 2 + Math.floor(hash2(x * 7 + 3, y * 13 + 5) * 3); // 2..4
   ctx.fillStyle = shadeColor(base, -0.35);

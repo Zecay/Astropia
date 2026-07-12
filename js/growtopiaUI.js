@@ -103,7 +103,6 @@ function makeDraggable(element, handle, { axis = 'both', anchor = 'top', onTap, 
   window.addEventListener('pointercancel', endDrag);
 }
 
-// Build a small item icon element (mirrors the look used across the UI).
 // Build a centered, pixelated item "sprite" element for a slot.
 function makeIcon(itemKey) {
   const def = GameConfig.items[itemKey];
@@ -117,9 +116,15 @@ function makeIcon(itemKey) {
   }
   if (def.type === 'block') {
     const blockDef = GameConfig.blocksByTile[def.blockId];
-    sprite.style.background = blockDef?.color || '#9b6b3d';
-    sprite.style.border = `2px solid ${blockDef?.border || '#7a522d'}`;
-    sprite.style.borderRadius = '3px';
+    if (itemKey === 'cave_bg') {
+      sprite.style.background = 'linear-gradient(135deg, #443f4f, #26232d)';
+      sprite.style.border = '2px solid #18151e';
+    } else {
+      sprite.style.background = blockDef?.color || '#9b6b3d';
+      sprite.style.border = `2px solid ${blockDef?.border || '#7a522d'}`;
+    }
+    sprite.style.borderRadius = '4px';
+    sprite.style.boxShadow = 'inset 2px 2px 0 rgba(255,255,255,0.32), inset -2px -2px 0 rgba(0,0,0,0.45), 1px 1px 2px rgba(0,0,0,0.5)';
     return sprite;
   }
   if (def.type === 'seed') {
@@ -127,6 +132,7 @@ function makeIcon(itemKey) {
     sprite.style.background = seedDef?.bloomColor || '#7ac943';
     sprite.style.border = '2px solid #4d8f24';
     sprite.style.borderRadius = '50%';
+    sprite.style.boxShadow = 'inset 2px 2px 0 rgba(255,255,255,0.5), inset -2px -2px 0 rgba(0,0,0,0.45), 1px 1px 2px rgba(0,0,0,0.5)';
     return sprite;
   }
   return sprite;
@@ -247,32 +253,36 @@ function setupSideButtons() {
   });
 }
 
-// ─── Chat Draggable Window ───────────────────────────────────────────────
+// ─── Chat Window (Roblox Style - Top-Left Fixed) ──────────────────────────
 export function makeChatDraggable() {
   if (!chatUI) return;
-  // Dock bottom-left, Growtopia-style (only vertically draggable, bounded).
+  // Dock top-left like Roblox chat, fixed in place, beautiful semi-transparent box
   chatUI.style.position = 'fixed';
-  chatUI.style.left = '12px';
-  chatUI.style.bottom = '16px';
-  chatUI.style.top = 'auto';
+  chatUI.style.left = '16px';
+  chatUI.style.top = '16px';
+  chatUI.style.bottom = 'auto';
+  chatUI.style.right = 'auto';
   chatUI.style.transform = 'none';
-  chatUI.style.zIndex = '250';
+  chatUI.style.zIndex = '150';
+  chatUI.style.width = 'min(350px, calc(100vw - 32px))';
 
-  // Add a dedicated drag handle / title bar at the top of the chat window.
+  // Dedicated clean title bar / header (Roblox style)
   const header = document.createElement('div');
   header.id = 'chatDragHandle';
   header.style.cssText = `
-    background:#1a2b3c; padding:5px 12px; font-size:12px; color:#7ed957;
-    cursor:grab; text-align:center; border-bottom:2px solid #4aa3ff;
-    pointer-events:auto; user-select:none;
+    background: linear-gradient(180deg, #2c4c64, #1b3244);
+    padding: 8px 14px; font-size: 13px; font-weight: 800; color: #7ed957;
+    text-align: left; border: 2px solid rgba(126, 212, 232, 0.45); border-bottom: none;
+    border-radius: 10px 10px 0 0; pointer-events: auto; user-select: none;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35); text-shadow: 1px 1px 0 rgba(0,0,0,0.6);
   `;
-  header.textContent = 'Chat';
+  header.innerHTML = `<span>💬 CHAT</span><span style="font-size:11px; opacity:0.75; font-weight:600; color:#c2e4f2;">Top-Left Fixed</span>`;
   chatUI.insertBefore(header, chatUI.firstChild);
 
-  makeDraggable(chatUI, header, {
-    axis: 'y',
-    anchor: 'bottom',
-    onTap: () => chatUI.classList.toggle('collapsed')
+  // Clicking header toggles chat collapsed/open state neatly
+  header.addEventListener('click', () => {
+    chatUI.classList.toggle('collapsed');
   });
 }
 

@@ -596,7 +596,7 @@ export function updateWorld(dt) {
 
   for (const [key, state] of blockDamage.entries()) {
     if (state.resetAt === null) {
-      const [tx, ty] = key.split(',').map(Number);
+      const [tx, ty] = key.replace('bg_', '').replace('seed_', '').split(',').map(Number);
       const isActive = miningState.interactionTarget && miningState.interactionTarget.tx === tx && miningState.interactionTarget.ty === ty;
       if (!isActive && state.currentDamage > 0) state.resetAt = DAMAGE_RESET_DELAY;
     }
