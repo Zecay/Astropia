@@ -150,6 +150,60 @@ canvas {
   transform: scale(1.05);
 }
 
+/* ─── Inventory dragger (always-visible top handle) ─────────────────────── */
+.inv-dragger {
+  cursor: grab;
+  user-select: none;
+}
+.inv-dragger:active { cursor: grabbing; }
+.inv-dragger-grip {
+  width: 26px; height: 5px;
+  background: rgba(255,255,255,0.55);
+  border-radius: 3px;
+  box-shadow: 0 7px 0 rgba(255,255,255,0.55), 0 -7px 0 rgba(255,255,255,0.55);
+  flex: 0 0 auto;
+}
+
+/* ─── Quick-access row (4 slots, always visible) ─────────────────────────── */
+.inv-quickrow {
+  display: flex;
+  gap: 6px;
+  padding: 8px 8px 10px;
+  justify-content: center;
+  background: #16222e;
+  border-bottom: 2px solid #4aa3ff;
+}
+.inv-quick-slot {
+  width: 46px;
+  height: 46px;
+  background: #1f3b5e;
+  border: 3px solid #4aa3ff;
+  border-radius: 8px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.inv-quick-slot:hover { border-color: #7ed957; }
+.inv-quick-slot.selected {
+  border-color: var(--ui-slot-selected);
+  box-shadow: 0 0 10px rgba(255,209,102,0.65), 0 0 0 1px rgba(255,209,102,0.6) inset;
+}
+.inv-quick-slot .qty {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  font-size: 11px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* Collapsed state: only the dragger + quick slots remain visible */
+#inventoryWindow.collapsed .window-content { display: none; }
+
 .inventory-grid .inv-slot .qty {
   position: absolute;
   right: 3px;

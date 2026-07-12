@@ -158,7 +158,7 @@
     },
     "9": {
       "id": 9, "name": "Cave Background", "durability": 2, "breakable": true, "placeable": true,
-      "inventoryKey": "cave_bg", "color": "#4a3f2e", "border": "#32291f", "soundGroup": "dirt",
+      "inventoryKey": "cave_bg", "color": "#34303c", "border": "#211d28", "soundGroup": "dirt",
       "sprite": { "col": 0, "row": 2 },
       "isBackground": true,
       "dropTable": [

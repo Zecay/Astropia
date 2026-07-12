@@ -113,7 +113,7 @@ export function getBlockDef(tile) {
 export function getBlockDurability(tile) { const d = getBlockDef(tile); return d ? d.durability || 0 : 0; }
 
 export function isTileSolid(tx, ty) {
-  const tile = isBg ? getBackgroundTile(tx, ty) : getTile(tx, ty);
+  const tile = getTile(tx, ty);
   if (tile === 0) return false;
   const def = getBlockDef(tile);
   return !!def;
@@ -181,7 +181,7 @@ export function getOrCreateBlockDamageState(tx, ty, isBg = false) {
     }
     return state;
   }
-  const tile = getTile(tx, ty);
+  const tile = isBg ? getBackgroundTile(tx, ty) : getTile(tx, ty);
   const durability = getBlockDurability(tile);
   if (!durability || tile === 2) return null;
   const key = getBlockKey(tx, ty);

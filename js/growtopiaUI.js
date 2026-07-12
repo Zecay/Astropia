@@ -18,38 +18,39 @@ import { playerState } from './player.js';
 
 // ─── Draggable Window Logic ───────────────────────────────────────────────
 // Drags `element` by its `handle`.
-//   axis:  'both' (default) or 'y' (vertical-only — the inventory window
-//          stays horizontally centered at left:50% / translateX(-50%)).
-//   onClose: optional callback fired after the window slides off-screen.
-function makeDraggable(element, handle, { axis = 'both', onClose } = {}) {
+//   axis:  'both' (default) or 'y' (vertical-only).
+//   onTap: fired on pointerup when the pointer barely moved (a click, not a
+//          drag) — used to toggle the inventory open/collapsed.
+function makeDraggable(element, handle, { axis = 'both', onTap } = {}) {
   let isDragging = false;
   let offsetX = 0, offsetY = 0;
+  let startX = 0, startY = 0, moved = 0;
 
   const startDrag = (e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
     isDragging = true;
+    moved = 0;
     const rect = element.getBoundingClientRect();
     offsetX = e.clientX - rect.left;
     offsetY = e.clientY - rect.top;
+    startX = e.clientX; startY = e.clientY;
     if (axis === 'y') element.style.bottom = 'auto'; // switch to top-anchored
     element.style.transition = 'none';
     document.body.style.userSelect = 'none';
   };
 
   const doDrag = (e) => {
-    if (!isDragging || element._closing) return;
+    if (!isDragging) return;
+    moved = Math.max(moved, Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY));
     const newLeft = e.clientX - offsetX;
     const newTop = e.clientY - offsetY;
 
     if (axis === 'y') {
-      // Vertical only — keep the window horizontally centered. No upper clamp
-      // so it can be dragged down past the viewport and closed.
+      // Vertical only — keep the window horizontally centered.
       const top = Math.max(0, newTop);
       element.style.left = '50%';
       element.style.transform = 'translateX(-50%)';
       element.style.top = top + 'px';
-      // Dragged below the bottom edge → slide off-screen and close.
-      if (top + element.offsetHeight > window.innerHeight) closeInventoryWindow(element, onClose);
     } else {
       const maxLeft = window.innerWidth - element.offsetWidth;
       const maxTop = window.innerHeight - element.offsetHeight;
@@ -60,9 +61,12 @@ function makeDraggable(element, handle, { axis = 'both', onClose } = {}) {
   };
 
   const endDrag = () => {
+    if (!isDragging) return;
     isDragging = false;
     element.style.transition = '';
     document.body.style.userSelect = '';
+    // Treat a near-stationary press as a click (toggle), not a drag.
+    if (moved < 6 && typeof onTap === 'function') onTap();
   };
 
   handle.addEventListener('pointerdown', startDrag);
@@ -71,58 +75,82 @@ function makeDraggable(element, handle, { axis = 'both', onClose } = {}) {
   window.addEventListener('pointercancel', endDrag);
 }
 
-// Slide the floating inventory window down off-screen and hide it (close).
-function closeInventoryWindow(element, onClose) {
-  if (element._closing) return;
-  element._closing = true;
-  element.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
-  element.style.transform = 'translate(-50%, 110%)';
-  element.style.opacity = '0';
-  setTimeout(() => {
-    element.style.display = 'none';
-    element._closing = false;
-    element.style.transition = '';
-    element.style.opacity = '';
-    if (typeof onClose === 'function') onClose();
-  }, 260);
+// Build a small item icon element (mirrors the look used across the UI).
+function makeIcon(itemKey) {
+  const def = GameConfig.items[itemKey];
+  const icon = document.createElement('div');
+  if (!def) return icon;
+  if (def.type === 'block') {
+    const blockDef = GameConfig.blocksByTile[def.blockId];
+    icon.style.width = '30px';
+    icon.style.height = '30px';
+    icon.style.background = blockDef?.color || '#9b6b3d';
+    icon.style.border = `2px solid ${blockDef?.border || '#7a522d'}`;
+    icon.style.borderRadius = '4px';
+  } else if (def.type === 'seed') {
+    const seedDef = GameConfig.seeds[def.seedType];
+    icon.style.width = '26px';
+    icon.style.height = '26px';
+    icon.style.background = seedDef?.bloomColor || '#7ac943';
+    icon.style.borderRadius = '50%';
+    icon.style.border = '2px solid #4d8f24';
+  } else {
+    icon.textContent = '✊';
+    icon.style.fontSize = '22px';
+  }
+  return icon;
 }
 
-// ─── New Inventory Grid Renderer ─────────────────────────────────────────
+// ─── New Inventory Renderer ────────────────────────────────────────────────
+// Renders TWO things:
+//   1) the always-visible 4-slot quick-access row (#invQuickRow), and
+//   2) the full backpack grid (#inventoryGrid, all owned items incl. hand).
 export function renderGrowtopiaInventory() {
-  if (!inventoryGrid) return;
+  const quickRow = document.getElementById('invQuickRow');
+  const grid = document.getElementById('inventoryGrid');
+  if (!grid) return;
 
-  inventoryGrid.innerHTML = '';
-
-  // Combine quickSlots + panel items
-  const allItems = new Map();
-
-  // Add items from quick slots
-  inventoryState.quickSlots.forEach(key => {
-    if (key && key !== 'hand' && getItemQuantity(key) > 0) {
-      allItems.set(key, getItemQuantity(key));
-    }
-  });
-
-  // Add items from panel
-  inventoryState.panelSlots.forEach(key => {
-    if (key && getItemQuantity(key) > 0 && !allItems.has(key)) {
-      allItems.set(key, getItemQuantity(key));
-    }
-  });
-
-  // Also show all owned items
-  for (const [key, data] of inventoryState.items) {
-    if (key !== 'hand' && data.quantity > 0 && !allItems.has(key)) {
-      allItems.set(key, data.quantity);
+  // ── 1) Quick-access row (always visible) ──
+  if (quickRow) {
+    quickRow.innerHTML = '';
+    for (let i = 0; i < 4; i++) {
+      const key = inventoryState.quickSlots[i] || null;
+      const slot = document.createElement('div');
+      slot.className = 'inv-quick-slot' + (i === inventoryState.selectedIndex ? ' selected' : '');
+      slot.dataset.slotIndex = String(i);
+      if (key) {
+        slot.appendChild(makeIcon(key));
+        if (key !== 'hand') {
+          const qty = document.createElement('div');
+          qty.className = 'qty';
+          qty.textContent = String(getItemQuantity(key));
+          slot.appendChild(qty);
+        }
+      } else {
+        slot.innerHTML = '<div class="itemIconEmpty">□</div>';
+      }
+      slot.addEventListener('click', () => setSelectedSlot(i));
+      quickRow.appendChild(slot);
     }
   }
 
-  // Always show the Punch (hand/fist) in the grid, even though it's the
-  // default quick-slot item.
+  // ── 2) Full grid (all owned items, incl. hand) ──
+  grid.innerHTML = '';
+
+  const allItems = new Map();
+  inventoryState.quickSlots.forEach(key => {
+    if (key && key !== 'hand' && getItemQuantity(key) > 0) allItems.set(key, getItemQuantity(key));
+  });
+  inventoryState.panelSlots.forEach(key => {
+    if (key && getItemQuantity(key) > 0 && !allItems.has(key)) allItems.set(key, getItemQuantity(key));
+  });
+  for (const [key, data] of inventoryState.items) {
+    if (key !== 'hand' && data.quantity > 0 && !allItems.has(key)) allItems.set(key, data.quantity);
+  }
+  // Always show the Punch (hand/fist) in the grid.
   if (getItemQuantity('hand') > 0) allItems.set('hand', getItemQuantity('hand'));
 
   const keys = Array.from(allItems.keys());
-
   keys.forEach(itemKey => {
     const def = GameConfig.items[itemKey];
     if (!def) return;
@@ -130,53 +158,28 @@ export function renderGrowtopiaInventory() {
     const slot = document.createElement('div');
     slot.className = 'inv-slot';
     slot.dataset.itemKey = itemKey;
+    slot.appendChild(makeIcon(itemKey));
 
-    // Icon
-    const icon = document.createElement('div');
-    if (def.type === 'block') {
-      const blockDef = GameConfig.blocksByTile[def.blockId];
-      icon.style.width = '30px';
-      icon.style.height = '30px';
-      icon.style.background = blockDef?.color || '#9b6b3d';
-      icon.style.border = `2px solid ${blockDef?.border || '#7a522d'}`;
-      icon.style.borderRadius = '4px';
-    } else if (def.type === 'seed') {
-      const seedDef = GameConfig.seeds[def.seedType];
-      icon.style.width = '26px';
-      icon.style.height = '26px';
-      icon.style.background = seedDef?.bloomColor || '#7ac943';
-      icon.style.borderRadius = '50%';
-      icon.style.border = '2px solid #4d8f24';
-    } else {
-      icon.textContent = '✊';
-      icon.style.fontSize = '22px';
-    }
-    slot.appendChild(icon);
-
-    // Quantity
     const qty = document.createElement('div');
     qty.className = 'qty';
     qty.textContent = allItems.get(itemKey);
     slot.appendChild(qty);
 
-    // Click to select / move to quickslot
     slot.addEventListener('click', () => {
-      // The hand (fist) is the default slot — selecting it just points at
-      // slot 0 rather than trying to equip it into another quick slot.
+      // The hand (fist) is the default slot — selecting it just points at slot 0.
       if (itemKey === 'hand') {
         inventoryState.selectedIndex = 0;
         renderGrowtopiaInventory();
-        oldRenderInventory(); // keep old bar in sync if needed
+        oldRenderInventory();
         return;
       }
-      // Try to equip to first available quick slot
+      // Equip to first available quick slot.
       let target = inventoryState.quickSlots.findIndex((s, i) => i > 0 && s === null);
       if (target === -1) target = 1;
-
       inventoryState.quickSlots[target] = itemKey;
       inventoryState.selectedIndex = target;
       renderGrowtopiaInventory();
-      oldRenderInventory(); // keep old bar in sync if needed
+      oldRenderInventory();
     });
 
     inventoryGrid.appendChild(slot);
@@ -265,9 +268,14 @@ export function initGrowtopiaUI() {
     inventoryWindow.style.left = '50%';
     inventoryWindow.style.transform = 'translateX(-50%)';
 
-    // Make inventory draggable via header (vertical-only, stays centered).
+    // The top dragger is always visible. Dragging it moves the whole window;
+    // a plain click on it toggles the inventory open/collapsed (the dragger
+    // and the 4 quick slots always remain visible).
     if (inventoryHeader) {
-      makeDraggable(inventoryWindow, inventoryHeader, { axis: 'y' });
+      makeDraggable(inventoryWindow, inventoryHeader, {
+        axis: 'both',
+        onTap: () => inventoryWindow.classList.toggle('collapsed')
+      });
     }
   }
 

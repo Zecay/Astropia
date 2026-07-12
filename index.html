@@ -19,18 +19,22 @@
   <canvas id="game" tabindex="0"></canvas>
   <!-- New Growtopia-style Floating Inventory Window -->
   <div id="inventoryWindow" class="floating-window" style="display: none;">
-    <div class="window-header" id="inventoryHeader">
-      <div class="title">Inventory</div>
-      <div style="font-size:11px; opacity:0.7;">Drag header to move</div>
+    <!-- Persistent dragger: always visible; drag to move, click to collapse/expand -->
+    <div class="window-header inv-dragger" id="inventoryHeader">
+      <span class="inv-dragger-grip"></span>
+      <span class="title">Inventory</span>
     </div>
-    
+
+    <!-- 4 quick-access slots (always visible) -->
+    <div id="invQuickRow" class="inv-quickrow"></div>
+
     <div class="window-content">
       <!-- Search Bar -->
       <input type="text" id="inventorySearch" class="inventory-search" placeholder="Enter Item Name...">
-      
+
       <!-- Item Grid -->
       <div id="inventoryGrid" class="inventory-grid"></div>
-      
+
       <!-- Side Action Buttons -->
       <div class="inventory-side">
         <button id="btnRecycle">RECYCLE</button>

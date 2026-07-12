@@ -107,7 +107,10 @@ function drawWorld() {
   const bottom = Math.ceil( (cameraState.y + canvas.height / devicePixelRatio / (2 * cameraState.zoom)) / TILE_SIZE) + 1;
 
   // ── Background layer (backgroundTiles: Cave Background etc.) ──
-  // Drawn FIRST so solids always render on top of backgrounds.
+  // Drawn FIRST so solids always render on top of backgrounds. Rendered as
+  // shaded cave rock (deterministic rock grain + ambient-occlusion at the
+  // cavern rim + a depth gradient) rather than the tileset sprite, so it
+  // reads as a cavern wall instead of a flat "window".
   for (let y = top; y <= bottom; y++) {
     for (let x = left; x <= right; x++) {
       const tile = getBgTileForRender(x, y);
@@ -115,16 +118,32 @@ function drawWorld() {
       const def = getBlockDef(tile);
       if (!def || !def.isBackground) continue;
       const px = x * TILE_SIZE, py = y * TILE_SIZE;
-      const sprite = def.sprite;
-      if (sprite) {
-        drawSprite(sprite.col, sprite.row, px, py, TILE_SIZE, TILE_SIZE, def.color, def.border);
-      } else {
-        ctx.fillStyle = def.color || '#4a3f2e';
-        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-      }
-      ctx.strokeStyle = def.border || '#32291f';
+      const base = def.color || '#34303c';
+
+      // Base rock fill.
+      ctx.fillStyle = base;
+      ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+
+      // Deterministic per-tile rock grain so the wall isn't a uniform slab.
+      drawRockGrain(px, py, TILE_SIZE, base, x, y);
+
+      // Ambient occlusion along the cavern rim: darken edges that border
+      // empty (un-excavated) background space, giving a recessed look.
+      drawCaveAO(x, y, px, py, TILE_SIZE);
+
+      // Depth gradient: subtle light at the top, dark at the bottom.
+      const g = ctx.createLinearGradient(0, py, 0, py + TILE_SIZE);
+      g.addColorStop(0, 'rgba(255,255,255,0.07)');
+      g.addColorStop(0.6, 'rgba(0,0,0,0.0)');
+      g.addColorStop(1, 'rgba(0,0,0,0.40)');
+      ctx.fillStyle = g;
+      ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+
+      // Faint rock border so tiles blend into a continuous cavern wall.
+      ctx.strokeStyle = def.border || '#211d28';
       ctx.lineWidth = 1;
       ctx.strokeRect(px + 0.5, py + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
+
       drawBlockCracks(x, y, px, py, true);
     }
   }
@@ -198,6 +217,92 @@ function drawBlockCracks(tx, ty, px, py, isBg = false) {
   }
   ctx.stroke();
   ctx.restore();
+}
+
+// ─── Cave background helpers ────────────────────────────────────────────────
+// Small, deterministic hash → [0,1) so rock texture is stable across frames
+// (no per-frame flicker). Used for both whole-tile shading and speckles.
+function hash2(x, y) {
+  let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263)) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0;
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
+}
+
+function hexToRgb(hex) {
+  let h = String(hex).replace('#', '');
+  if (h.length === 3) h = h.split('').map(c => c + c).join('');
+  const n = parseInt(h, 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+// Lighten (amt > 0) or darken (amt < 0) a hex color, returning rgb(...).
+function shadeColor(hex, amt) {
+  const c = hexToRgb(hex);
+  const f = 1 + amt;
+  const r = clamp(Math.round(c.r * f), 0, 255);
+  const g = clamp(Math.round(c.g * f), 0, 255);
+  const b = clamp(Math.round(c.b * f), 0, 255);
+  return `rgb(${r},${g},${b})`;
+}
+
+// Deterministic rock grain for a single background tile: a whole-tile
+// brightness jitter plus a few darker speckles, so the cavern wall looks
+// like uneven rock instead of a flat slab.
+function drawRockGrain(px, py, size, base, x, y) {
+  const n = hash2(x, y);
+  const shade = (n - 0.5) * 0.20;            // +/- ~10% per tile
+  ctx.globalAlpha = 0.30;
+  ctx.fillStyle = shadeColor(base, shade);
+  ctx.fillRect(px, py, size, size);
+  ctx.globalAlpha = 1;
+
+  const spec = 2 + Math.floor(hash2(x * 7 + 3, y * 13 + 5) * 3); // 2..4
+  ctx.fillStyle = shadeColor(base, -0.35);
+  for (let i = 0; i < spec; i++) {
+    const hx = hash2(x * 31 + i * 17, y * 53 + i * 11);
+    const hy = hash2(x * 19 + i * 23, y * 41 + i * 7);
+    const sx = px + Math.floor(hx * (size - 3));
+    const sy = py + Math.floor(hy * (size - 3));
+    const r = 1 + Math.floor(hash2(x + i + 1, y + i + 1) * 2);
+    ctx.globalAlpha = 0.22;
+    ctx.fillRect(sx, sy, r, r);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// Ambient occlusion: where a background tile borders empty (un-excavated)
+// background space, darken that edge with a soft gradient so the carved
+// cavern reads as recessed into rock rather than painted flat.
+function drawCaveAO(x, y, px, py, size) {
+  const open = (nx, ny) => {
+    const t = getBgTileForRender(nx, ny);
+    if (t === 0) return true;                 // empty / out-of-bounds
+    const d = getBlockDef(t);
+    return !d || !d.isBackground;
+  };
+  const edge = size * 0.45;
+  const dark = 'rgba(0,0,0,0.55)';
+  const trans = 'rgba(0,0,0,0)';
+  if (open(x, y - 1)) {
+    const g = ctx.createLinearGradient(0, py, 0, py + edge);
+    g.addColorStop(0, dark); g.addColorStop(1, trans);
+    ctx.fillStyle = g; ctx.fillRect(px, py, size, edge);
+  }
+  if (open(x, y + 1)) {
+    const g = ctx.createLinearGradient(0, py + size, 0, py + size - edge);
+    g.addColorStop(0, dark); g.addColorStop(1, trans);
+    ctx.fillStyle = g; ctx.fillRect(px, py + size - edge, size, edge);
+  }
+  if (open(x - 1, y)) {
+    const g = ctx.createLinearGradient(px, 0, px + edge, 0);
+    g.addColorStop(0, dark); g.addColorStop(1, trans);
+    ctx.fillStyle = g; ctx.fillRect(px, py, edge, size);
+  }
+  if (open(x + 1, y)) {
+    const g = ctx.createLinearGradient(px + size, 0, px + size - edge, 0);
+    g.addColorStop(0, dark); g.addColorStop(1, trans);
+    ctx.fillStyle = g; ctx.fillRect(px + size - edge, py, edge, size);
+  }
 }
 
 // Seeds now render in three visual stages driven by growthPct: Sprout ->
