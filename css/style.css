@@ -112,31 +112,13 @@ canvas {
   color: #fff;
 }
 
-/* Inventory Window: centered at the bottom of the screen */
+/* Inventory Window: bottom sheet drawer attached below dragger at all times */
 #inventoryWindow {
   width: min(660px, 95vw);
-  bottom: 26px;
+  bottom: 16px;
   left: 50%;
   transform: translateX(-50%);
 }
-
-/* Collapsed state: tight, compact pill box fitting exactly around the 4 quick slots */
-#inventoryWindow.collapsed {
-  width: fit-content;
-  min-width: 275px;
-  max-width: 95vw;
-  background: rgba(22, 42, 60, 0.96);
-  border-radius: 14px;
-  box-shadow:
-    inset 2px 2px 0 rgba(255, 255, 255, 0.3),
-    inset -2px -2px 0 rgba(0, 0, 0, 0.5),
-    0 6px 20px rgba(0, 0, 0, 0.6);
-}
-#inventoryWindow.collapsed #invQuickRow {
-  border-bottom: none;
-  padding: 8px 12px;
-}
-#inventoryWindow.collapsed .window-content { display: none; }
 
 /* ─── Hotbar (top, directly above the grid) ─────────────────────────────── */
 #invQuickRow {

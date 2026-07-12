@@ -6,7 +6,7 @@
 // placing blocks, camera zoom, chat) it calls back into world/camera modules
 // via the callbacks wired up in main.js through `configureInput`.
 
-import { clamp, clientToLocal } from './utils.js';
+import { clamp, clientToLocal, localToWorld } from './utils.js';
 import { GameConfig } from './config.js';
 import {
   canvas, leftBtn, rightBtn, jumpBtn, punchBtn, saveQuitBtn,
@@ -144,17 +144,12 @@ export function setupInput() {
   });
 
   window.addEventListener('mousemove', (e) => {
-    // Update ghost hover for every mouse move
+    // Update ghost hover for every mouse move using localToWorld for 100% precision
     const local = clientToLocal(e.clientX, e.clientY);
     const TILE_SIZE = GameConfig.world.tileSize;
-    // Store hover position globally for renderer ghost block
-    const zoom = cameraState ? cameraState.zoom : 1;
-    const camX = cameraState ? cameraState.x : 0;
-    const camY = cameraState ? cameraState.y : 0;
-    const worldX = (local.x + camX * zoom) / zoom;
-    const worldY = (local.y + camY * zoom) / zoom;
-    const tx = Math.floor(worldX / TILE_SIZE);
-    const ty = Math.floor(worldY / TILE_SIZE);
+    const worldPos = localToWorld(local.x, local.y);
+    const tx = Math.floor(worldPos.x / TILE_SIZE);
+    const ty = Math.floor(worldPos.y / TILE_SIZE);
 
     window.__ghostHover = { active: true, tx, ty, localX: local.x, localY: local.y };
 
@@ -166,8 +161,6 @@ export function setupInput() {
 
   window.addEventListener('mouseup', (e) => {
     if (e.button === 0) hooks.endInteraction();
-    // Clear ghost on release
-    if (window.__ghostHover) window.__ghostHover.active = false;
   });
 
   // ── Touch / pointer ──

@@ -224,28 +224,63 @@ export function renderGrowtopiaInventory() {
 // Search filter
 // Side panel buttons
 function setupSideButtons() {
+  const dropModal = document.getElementById('dropModal');
+  const dropModalText = document.getElementById('dropModalText');
+  const dropCountInput = document.getElementById('dropCountInput');
+  const dropModalOk = document.getElementById('dropModalOk');
+  const dropModalCancel = document.getElementById('dropModalCancel');
+
+  if (dropModalCancel) {
+    dropModalCancel.onclick = () => { if (dropModal) dropModal.style.display = 'none'; };
+  }
+
+  if (dropModalOk && dropCountInput) {
+    const doDrop = async () => {
+      const selectedKey = inventoryState.quickSlots[inventoryState.selectedIndex] || getSelectedItemKey();
+      if (!selectedKey || selectedKey === 'hand') return;
+      const maxQty = getItemQuantity(selectedKey);
+      if (maxQty <= 0) return;
+      let count = parseInt(dropCountInput.value, 10);
+      if (isNaN(count) || count < 1) count = 1;
+      if (count > maxQty) count = maxQty;
+
+      const { consumeInventoryItem } = await import('./inventory.js');
+      const { spawnDroppedItem } = await import('./world.js');
+      if (consumeInventoryItem(selectedKey, count)) {
+        const dropX = playerState.x + playerState.width / 2 + playerState.facing * 38;
+        const dropY = playerState.y + playerState.height * 0.45;
+        spawnDroppedItem(selectedKey, dropX, dropY, count);
+      }
+      if (dropModal) dropModal.style.display = 'none';
+      renderGrowtopiaInventory();
+      oldRenderInventory();
+    };
+    dropModalOk.onclick = doDrop;
+    dropCountInput.onkeydown = (e) => { if (e.key === 'Enter') doDrop(); };
+  }
+
   const btns = {
     btnRecycle: () => alert('Recycle feature coming soon!'),
     btnStore: () => alert('Store feature coming soon!'),
     btnDrop: () => {
-      const selected = inventoryState.quickSlots[inventoryState.selectedIndex];
-      if (selected && selected !== 'hand') {
-        // Simple drop: remove 1 from inventory
-        const qty = getItemQuantity(selected);
-        if (qty > 0) {
-          // We can simulate a drop by removing from inventory
-          const item = inventoryState.items.get(selected);
-          if (item) {
-            item.quantity--;
-            if (item.quantity <= 0) inventoryState.items.delete(selected);
-          }
-          renderGrowtopiaInventory();
-          oldRenderInventory();
-        }
+      const selected = inventoryState.quickSlots[inventoryState.selectedIndex] || getSelectedItemKey();
+      if (!selected || selected === 'hand') {
+        alert('Please select an item to drop first!');
+        return;
+      }
+      const qty = getItemQuantity(selected);
+      if (qty <= 0) return;
+      if (dropModal && dropModalText && dropCountInput) {
+        const itemName = GameConfig.items[selected]?.name || selected;
+        dropModalText.textContent = `How many ${itemName} to drop? (Max: ${qty})`;
+        dropCountInput.max = qty;
+        dropCountInput.value = 1;
+        dropModal.style.display = 'block';
+        dropCountInput.focus();
+        dropCountInput.select();
       }
     },
-    btnInfo: () => alert('Item info coming soon!'),
-    btnFav: () => alert('Favorites coming soon!')
+    btnInfo: () => alert('Item info coming soon!')
   };
 
   Object.keys(btns).forEach(id => {

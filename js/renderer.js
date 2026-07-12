@@ -444,28 +444,46 @@ function drawDroppedItems() {
   for (const item of droppedItems) {
     const def = GameConfig.items[item.itemKey];
     if (!def) continue;
-    const bobOffset = Math.sin(item.bob) * 2;
+    const bobOffset = Math.sin(item.bob) * 5;
     const drawX = item.x;
     const drawY = item.y + bobOffset;
 
     ctx.save();
+    // Glowing golden ground shadow right under the hovering item
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.beginPath();
+    ctx.ellipse(drawX, item.y + 12, 8, 3.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     if (def.type === 'seed') {
       const seedDef = GameConfig.seeds[def.seedType];
       ctx.fillStyle   = seedDef?.bloomColor  || '#7ac943';
       ctx.strokeStyle = seedDef?.stemColor || '#4d8f24';
       ctx.beginPath();
-      ctx.ellipse(drawX, drawY, 4, 6, -0.4, 0, Math.PI * 2);
+      ctx.ellipse(drawX, drawY, 5, 7, -0.4, 0, Math.PI * 2);
       ctx.fill();
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1.5;
       ctx.stroke();
     } else if (def.type === 'block') {
       const blockDef = GameConfig.blocksByTile[def.blockId];
       ctx.fillStyle   = blockDef?.color  || '#9b6b3d';
       ctx.strokeStyle = blockDef?.border || '#7a522d';
-      ctx.lineWidth = 1;
-      ctx.fillRect(  drawX - 6, drawY - 6, 12, 12);
-      ctx.strokeRect(drawX - 5.5, drawY - 5.5, 11, 11);
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(  drawX - 7, drawY - 7, 14, 14);
+      ctx.strokeRect(drawX - 6.5, drawY - 6.5, 13, 13);
     }
+
+    // Draw quantity badge floating above if > 1
+    if (item.quantity > 1) {
+      ctx.font = '900 11px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.strokeText(`x${item.quantity}`, drawX, drawY - 11);
+      ctx.fillText(`x${item.quantity}`, drawX, drawY - 11);
+    }
+
     ctx.restore();
   }
 }

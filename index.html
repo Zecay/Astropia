@@ -42,6 +42,19 @@
       </div>
     </div>
   </div>
+
+  <!-- Drop Confirmation Dialog Modal -->
+  <div id="dropModal" class="floating-window" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 300; width: min(340px, 90vw); padding: 16px;">
+    <div class="window-header" style="border-radius: 6px; margin: -16px -16px 12px -16px; cursor: default;">
+      <span class="title">DROP ITEM</span>
+    </div>
+    <p id="dropModalText" style="margin: 0 0 12px; font-size: 13px; font-weight: bold; text-align: center; color: #eaf6ff; text-shadow: 1px 1px 0 rgba(0,0,0,0.6);"></p>
+    <input type="number" id="dropCountInput" value="1" min="1" max="999" style="width: 100%; box-sizing: border-box; padding: 10px; border-radius: 6px; border: 2px solid #84c2d8; background: #142636; color: #fff; font-size: 16px; font-weight: 900; text-align: center; margin-bottom: 16px;" />
+    <div style="display: flex; gap: 10px;">
+      <button id="dropModalCancel" type="button" style="flex: 1; padding: 10px; border-radius: 6px; border: 2px solid #ff6b6b; background: #c8393c; color: #fff; font-weight: 800; cursor: pointer; text-transform: uppercase;">CANCEL</button>
+      <button id="dropModalOk" type="button" style="flex: 1; padding: 10px; border-radius: 6px; border: 2px solid #347a2a; background: #7ed957; color: #10200f; font-weight: 800; cursor: pointer; text-transform: uppercase;">OK (DROP)</button>
+    </div>
+  </div>
   <div id="touchControls">
     <div class="touchBtn" id="leftBtn">◀</div>
     <div class="touchBtn" id="rightBtn">▶</div>

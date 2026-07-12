@@ -232,10 +232,10 @@ export function spawnDroppedItem(itemKey, x, y, quantity = 1) {
   if (!GameConfig.items[itemKey] || quantity <= 0) return;
   droppedItems.push({
     itemKey, quantity, x, y,
-    vx: (Math.random() - 0.5) * 50,
-    vy: -70 - Math.random() * 35,
+    vx: (Math.random() - 0.5) * 35,
+    vy: 0,
     bob: Math.random() * Math.PI * 2,
-    grounded: false, physicsPaused: false, airTime: 0
+    grounded: true, physicsPaused: false, airTime: 0
   });
   if (droppedItems.length > 80) droppedItems.splice(0, droppedItems.length - 80);
 }
@@ -252,44 +252,21 @@ export function applyBlockDrops(tile, tx, ty) {
 }
 
 function updateDroppedItems(dt) {
-  const TILE_SIZE = GameConfig.world.tileSize;
   const pcx = playerState.x + playerState.width / 2;
   const pcy = playerState.y + playerState.height / 2;
 
   for (let i = droppedItems.length - 1; i >= 0; i--) {
     const item = droppedItems[i];
-    item.bob += dt * 4;
-    item.airTime = (item.airTime || 0) + dt;
+    item.bob += dt * 3.6;
 
-    if (item.physicsPaused) {
-      const itx = Math.floor(item.x / TILE_SIZE);
-      const ity = Math.floor(item.y / TILE_SIZE);
-      if (!isTileSolid(itx, ity)) { item.physicsPaused = false; item.grounded = false; }
-    }
+    // Hover physics: no gravity (vy = 0), smooth horizontal toss damping
+    item.x += item.vx * dt;
+    item.vx *= 0.88;
 
-    if (!item.physicsPaused) {
-      if (!item.grounded) {
-        item.x += item.vx * dt; item.y += item.vy * dt;
-        item.vy += 260 * dt; item.vx *= 0.96;
-        const bty = Math.floor((item.y + 10) / TILE_SIZE);
-        const btx = Math.floor(item.x / TILE_SIZE);
-        if (getTile(btx, bty) !== 0) { item.y = bty * TILE_SIZE - 10; item.vx = 0; item.vy = 0; item.grounded = true; }
-      } else {
-        const bty = Math.floor((item.y + 10) / TILE_SIZE);
-        const btx = Math.floor(item.x / TILE_SIZE);
-        if (getTile(btx, bty) === 0) {
-          item.grounded = false;
-        } else if (item.airTime > 0.12) {
-          const itx2 = Math.floor(item.x / TILE_SIZE);
-          const ity2 = Math.floor(item.y / TILE_SIZE);
-          if (isTileSolid(itx2, ity2)) item.physicsPaused = true;
-        }
-      }
-    }
-
-    if (!item.physicsPaused) {
-      const dx = item.x - pcx, dy = item.y - pcy;
-      if (dx * dx + dy * dy <= 400) { addInventoryItem(item.itemKey, item.quantity); droppedItems.splice(i, 1); }
+    const dx = item.x - pcx, dy = (item.y + Math.sin(item.bob) * 5) - pcy;
+    if (dx * dx + dy * dy <= 450) {
+      addInventoryItem(item.itemKey, item.quantity);
+      droppedItems.splice(i, 1);
     }
   }
 }
@@ -538,6 +515,7 @@ export function tryPunchAction() {
 
     const seed = getSeedAt(tx, ty);
     if (seed) {
+      miningState.interactionTarget = { tx, ty, kind: 'seed' };
       if (damageSeed(seed)) return true;
     }
 
@@ -545,10 +523,9 @@ export function tryPunchAction() {
     const bg = getBackgroundTile(tx, ty);
     const sel = getSelectedItemDef();
     const canBreakSolid = getBlockDurability(tile) && tile !== 2 && canModifyTile(tx, ty);
-    // Background blocks (e.g. Cave Background) are only punchable when no
-    // solid block sits in front of them.
     const canBreakBg = tile === 0 && bg !== 0 && sel.usableForBreaking && canModifyTile(tx, ty);
     if (canBreakSolid || canBreakBg) {
+      miningState.interactionTarget = { tx, ty, kind: canBreakSolid ? 'block' : 'bg' };
       if (damageBlock(tx, ty)) return true;
     }
   }
